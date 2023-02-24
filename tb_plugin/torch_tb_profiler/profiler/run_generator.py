@@ -41,6 +41,7 @@ class RunGenerator(object):
         profile_run.operation_stack_by_name_input = self._generate_op_table_for_stack(True)
 
         if self.profile_data.has_kernel:
+            print("self.profile_data.has_kernel !")
             profile_run.views.append(consts.KERNEL_VIEW)
             profile_run.kernel_op_table = self._generate_kernel_op_table()
             profile_run.kernel_pie = self._generate_kernel_pie()
@@ -112,7 +113,7 @@ class RunGenerator(object):
             data['steps']['columns'].extend([{'type': 'number', 'name': 'Communication'},
                                              column_tootip])
         if show_gpu:
-            data['steps']['columns'].extend([{'type': 'number', 'name': 'Runtime'},
+            data['steps']['columns'].extend([{'type': 'number', 'name': 'cuda_runtime'},
                                              column_tootip])
         data['steps']['columns'].extend([{'type': 'number', 'name': 'DataLoader'},
                                          column_tootip,
@@ -138,7 +139,7 @@ class RunGenerator(object):
                             build_part_time_str(costs.costs[ProfileRole.Communication], 'Communication')])
             if show_gpu:
                 row.extend([costs.costs[ProfileRole.Runtime],
-                            build_part_time_str(costs.costs[ProfileRole.Runtime], 'Runtime')])
+                            build_part_time_str(costs.costs[ProfileRole.Runtime], 'cuda_runtime')])
             row.extend([costs.costs[ProfileRole.DataLoader],
                         build_part_time_str(costs.costs[ProfileRole.DataLoader], 'DataLoader'),
                         costs.costs[ProfileRole.CpuOp],
@@ -160,7 +161,7 @@ class RunGenerator(object):
             ])
         if show_gpu:
             avg_costs.extend([
-                build_avg_cost_dict('Runtime', self.profile_data.avg_costs.costs[ProfileRole.Runtime])
+                build_avg_cost_dict('cuda_runtime', self.profile_data.avg_costs.costs[ProfileRole.Runtime])
             ])
         avg_costs.extend([
             build_avg_cost_dict('DataLoader', self.profile_data.avg_costs.costs[ProfileRole.DataLoader]),

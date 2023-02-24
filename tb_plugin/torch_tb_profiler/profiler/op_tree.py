@@ -9,17 +9,74 @@ from .. import utils
 from .node import (BackwardNode, DeviceNode, ModuleNode, OperatorNode,
                    ProfilerStepNode, RuntimeNode, is_operator_node)
 from .trace import EventTypes
+# from .event_parser import traverse_tid2tree
 
+import copy
 logger = utils.get_logger()
+
+def find_op_correlation_runtime_node(op: OperatorNode, externalid_to_runtime: Dict[int, List[RuntimeNode]] ):
+    """使用贪心的方法去寻找 runtime node 对应哪一个 op node
+
+    Args:
+        op (OperatorNode): op 树的 root 节点
+        externalid_to_runtime (Dict[int, List[RuntimeNode]]): 字典,key 为 external_id,value为 RuntimeNode
+
+    Returns:
+        _type_: _description_
+    """
+    runtime_nodes, external_id_list = [], []
+    for external_id, runtime_node_list in externalid_to_runtime.items():
+        min_start_time = sys.maxsize
+        max_end_time = 0
+        # 必须保证这个op cpu侧的执行时间，完全包裹对应 runtime_node_list 里面的 cudaLaunchKernel 的执行时间
+        # 另外需要注意的是，我们必须保证找到其直系孩子，也就是找到最小包含关系
+        for runtime_node in runtime_node_list:
+            # print(f"external_id:{external_id} has: runtime_node name:{runtime_node.name}, start_time:{runtime_node.start_time}, \
+            # end_time:{runtime_node.end_time}, self.external_id:{runtime_node.external_id}")
+            if runtime_node.start_time < min_start_time:
+                min_start_time = runtime_node.start_time
+            if runtime_node.end_time > max_end_time:
+                max_end_time = runtime_node.end_time
+        
+        if op.start_time <= min_start_time and op.end_time >= max_end_time:
+            # print(f"op:{op.name} has runtime_node_list :{runtime_node}")
+            runtime_nodes.extend(runtime_node_list)
+            external_id_list.append(external_id)
+    
+    print(f"finally op:{op.name} has runtime_node_list {len(runtime_nodes)}")
+    return runtime_nodes, external_id_list
+
+
+def traverse_tid2tree(op: OperatorNode, tid2tree: Dict[int, OperatorNode], externalid_to_runtime: Dict[int, List[RuntimeNode]], level=0):
+    """遍历整个op树,调用 find_op_correlation_runtime_node 手动关联每一个  op node 对应的 runtime node
+
+    Args:
+        op (OperatorNode): _description_
+        tid2tree (Dict[int, OperatorNode]): _description_
+        externalid_to_runtime (Dict[int, List[RuntimeNode]]): _description_
+        level (int, optional): _description_. Defaults to 0.
+    """
+    print("   "*level + f"v:{op}")
+    for cnode in op.children:
+        traverse_tid2tree(cnode, tid2tree, externalid_to_runtime, level+1)
+    # do something.
+    runtime_nodes, external_id_list = find_op_correlation_runtime_node(op, externalid_to_runtime)
+    # 如果这个op找到了起执行起止时间内包含的 runtime_nodes 将其加入到 op.runtimes 列表中
+    if len(runtime_nodes) > 0:
+        print(f"op:{op.name} with external_id:{op.external_id} add runtime nodes: {runtime_nodes}")
+        op.runtimes.extend(runtime_nodes)
+        for external_id in external_id_list:
+            externalid_to_runtime.pop(external_id)   # pop掉，避免后面再统计到这个 runtime
 
 
 class OpTreeBuilder:
     BACKWARD_ROOT_PREFIX = 'autograd::engine::evaluate_function:'
     BACKWARD_ACCUMULATE_GRAD = 'autograd::engine::evaluate_function: torch::autograd::AccumulateGrad'
 
-    def __init__(self):
+    def __init__(self, externalid_to_runtime=None):
         self.main_tid: int = None
         self.tid2tree: Dict[int, OperatorNode] = None
+        self.externalid_to_runtime = copy.deepcopy(externalid_to_runtime)
 
     def build_tree(self,
                    tid2list: Dict[int, List[OperatorNode]],
@@ -28,17 +85,20 @@ class OpTreeBuilder:
                    fwd_bwd_map: Dict[int, int]):
         """Construct the BackwardNode and replace the original backward nodes
         """
+        print("<<<<<<<<<<<<<<< build_tree >>>>>>>>>>>>>>>>")
         self.tid2tree = self._build_tree(tid2list, tid2zero_rt_list, staled_device_nodes)
 
         # if could not find any forward/backward association, skip the processing
         if not fwd_bwd_map:
-            logger.debug('there is no any forwarwd backward association, skip processing backward correlation.')
+            print("not fwd_bwd_map!")
+            logger.warning('there is no any forwarwd backward association, skip processing backward correlation.')
             return self.tid2tree
 
         self._set_main_tid()
 
         modules, backward_nodes = self._get_modules()
         if not modules or not backward_nodes:
+            print("not modules or not backward_nodes!")
             return self.tid2tree
 
         _, ts2parent = OpTreeBuilder._get_node_parents(backward_nodes)
@@ -158,8 +218,22 @@ class OpTreeBuilder:
             for child in node.children:
                 remove_dup_nodes(child)
 
+        print(f"Before host_node_list: {host_node_list}")
+        print(f"zero_rt_list:{zero_rt_list}")
+        print(f"staled_device_nodes:{staled_device_nodes}")
+
         root_node = build_tree_relationship(host_node_list, zero_rt_list, staled_device_nodes)
         remove_dup_nodes(root_node)
+
+        # <<<<<<<<<<<<< add two >>>>>>>>>>>>>>>>>>>>>>
+        # 由于 event_parser.py:parse_nodes 方法的bug，我们在这里手动寻找 runtime node 和 op node 的关联
+        externalid_to_runtime = self.externalid_to_runtime
+        print(f"externalid_to_runtime:{externalid_to_runtime}")
+        print("\n")
+        print("<<<<<<<<<<< second traverse_tid2tree >>>>>>>>>>>>>>>>>>>> ")
+        traverse_tid2tree(root_node, None, externalid_to_runtime, 0)
+        # <<<<<<<<<<<<< add two >>>>>>>>>>>>>>>>>>>>>>
+    
         root_node.fill_stats()
 
         # replace the root_node start_time/end_time

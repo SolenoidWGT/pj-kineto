@@ -179,6 +179,7 @@ def _aggregate_modules(modules: Iterable[Union[ModuleNode, PLModuleNode]]) -> Di
 
         agg.self_device_duration += m.self_device_duration
         agg.device_duration += m.device_duration
+        # print(f"dev time: {m.self_device_duration}")
 
     return module_aggs
 

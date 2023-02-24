@@ -116,8 +116,9 @@ class TestProfiler(unittest.TestCase):
             for op_agg in op_list:
                 if op_agg.name == 'aten::to':
                     op_count += 1
-                    self.assertEqual(op_agg.input_shape,
-                                     '[[2, 8, 5], [], [], [], [], [], [], []]')
+                    self.assertEqual(
+                        op_agg.input_shape,
+                        '[[2, 8, 5], [], [], [], [], [], [], []]')
                     self.assertEqual(op_agg.calls, 1)
                     self.assertEqual(op_agg.host_duration, 60)
                     self.assertEqual(op_agg.device_duration, 0)
@@ -130,8 +131,8 @@ class TestProfiler(unittest.TestCase):
                     self.assertEqual(op_agg.calls, 1)
                     self.assertEqual(op_agg.host_duration, 70)
                     self.assertEqual(op_agg.device_duration, 30)
-                    self.assertEqual(
-                        op_agg.self_host_duration, 70 - 20 - 10 - 5)
+                    self.assertEqual(op_agg.self_host_duration,
+                                     70 - 20 - 10 - 5)
                     self.assertEqual(op_agg.self_device_duration, 30)
             self.assertEqual(op_count, 2)
 
@@ -140,17 +141,18 @@ class TestProfiler(unittest.TestCase):
 
         self.assertEqual(len(profile.kernel_list_groupby_name_op), 1)
         self.assertEqual(profile.kernel_stat.shape[0], 1)
-        self.assertEqual(profile.kernel_list_groupby_name_op[0].name,
-                         'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
         self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].op_name, 'aten::nll_loss_backward')
+            profile.kernel_list_groupby_name_op[0].name,
+            'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].op_name,
+                         'aten::nll_loss_backward')
         self.assertEqual(profile.kernel_list_groupby_name_op[0].calls, 1)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].total_duration, 15)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].min_duration, 15)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].max_duration, 15)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].total_duration,
+                         15)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].min_duration,
+                         15)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].max_duration,
+                         15)
         self.assertEqual(profile.kernel_stat.iloc[0]['count'], 1)
         self.assertEqual(profile.kernel_stat.iloc[0]['sum'], 15)
         self.assertEqual(profile.kernel_stat.iloc[0]['mean'], 15)
@@ -336,8 +338,8 @@ class TestProfiler(unittest.TestCase):
         profile = parse_json_trace(json_content)
         profile.process()
         self.assertEqual(len(profile.op_list_groupby_name), 1)
-        self.assertEqual(
-            profile.op_list_groupby_name[0].self_device_duration, 8)
+        self.assertEqual(profile.op_list_groupby_name[0].self_device_duration,
+                         8)
 
     # Test Runtime with 'external id' 0.
     # This kind of Runtime should not be attached to any operator,
@@ -368,8 +370,8 @@ class TestProfiler(unittest.TestCase):
         profile = parse_json_trace(json_content)
         profile.process()
         self.assertEqual(profile.op_list_groupby_name[0].device_duration, 0)
-        self.assertEqual(
-            profile.op_list_groupby_name[0].self_device_duration, 0)
+        self.assertEqual(profile.op_list_groupby_name[0].self_device_duration,
+                         0)
         self.assertEqual(profile.kernel_stat.iloc[0]['count'], 1)
 
     # Test Runtime directly called in ProfilerStep, not inside any operator.
@@ -444,8 +446,8 @@ class TestProfiler(unittest.TestCase):
         """
         profile = parse_json_trace(json_content)
         profile.process()
-        self.assertEqual(
-            profile.op_list_groupby_name[0].device_duration, 120318 + 132800)
+        self.assertEqual(profile.op_list_groupby_name[0].device_duration,
+                         120318 + 132800)
         self.assertEqual(profile.kernel_stat.iloc[0]['count'], 2)
         self.assertEqual(len(profile.kernel_list_groupby_name_op), 1)
 
@@ -506,8 +508,9 @@ class TestProfiler(unittest.TestCase):
             for op_agg in op_list:
                 if op_agg.name == 'aten::to':
                     op_count += 1
-                    self.assertEqual(op_agg.input_shape,
-                                     '[[2, 8, 5], [], [], [], [], [], [], []]')
+                    self.assertEqual(
+                        op_agg.input_shape,
+                        '[[2, 8, 5], [], [], [], [], [], [], []]')
                     self.assertEqual(op_agg.calls, 1)
                     self.assertEqual(op_agg.host_duration, 60)
                     self.assertEqual(op_agg.device_duration, 0)
@@ -527,17 +530,18 @@ class TestProfiler(unittest.TestCase):
         test_op_list(profile.op_list_groupby_name)
         test_op_list(profile.op_list_groupby_name_input)
 
-        self.assertEqual(profile.kernel_list_groupby_name_op[0].name,
-                         'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
         self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].op_name, 'aten::nll_loss_backward')
+            profile.kernel_list_groupby_name_op[0].name,
+            'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].op_name,
+                         'aten::nll_loss_backward')
         self.assertEqual(profile.kernel_list_groupby_name_op[0].calls, 1)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].total_duration, 100)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].min_duration, 100)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].max_duration, 100)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].total_duration,
+                         100)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].min_duration,
+                         100)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].max_duration,
+                         100)
         self.assertEqual(profile.kernel_stat.iloc[0]['count'], 1)
         self.assertEqual(profile.kernel_stat.iloc[0]['sum'], 100)
         self.assertEqual(profile.kernel_stat.iloc[0]['mean'], 100)
@@ -623,8 +627,8 @@ class TestProfiler(unittest.TestCase):
         self.assertEqual(step.costs[ProfileRole.Other], 360 - 350)
         # Device side takes effect.
         self.assertEqual(step.costs[ProfileRole.Total], 610 - 350)
-        self.assertEqual(
-            profile.avg_costs.costs[ProfileRole.Total], ((320 - 100) + (610 - 350)) / 2)
+        self.assertEqual(profile.avg_costs.costs[ProfileRole.Total],
+                         ((320 - 100) + (610 - 350)) / 2)
 
         self.assertEqual(len(profile.op_list_groupby_name), 2)
         self.assertEqual(len(profile.op_list_groupby_name_input), 2)
@@ -634,8 +638,9 @@ class TestProfiler(unittest.TestCase):
             for op_agg in op_list:
                 if op_agg.name == 'aten::to':
                     op_count += 1
-                    self.assertEqual(op_agg.input_shape,
-                                     '[[2, 8, 5], [], [], [], [], [], [], []]')
+                    self.assertEqual(
+                        op_agg.input_shape,
+                        '[[2, 8, 5], [], [], [], [], [], [], []]')
                     self.assertEqual(op_agg.calls, 1)
                     self.assertEqual(op_agg.host_duration, 60)
                     self.assertEqual(op_agg.device_duration, 40)
@@ -656,17 +661,18 @@ class TestProfiler(unittest.TestCase):
 
         self.assertEqual(len(profile.kernel_list_groupby_name_op), 1)
         self.assertEqual(profile.kernel_stat.shape[0], 1)
-        self.assertEqual(profile.kernel_list_groupby_name_op[0].name,
-                         'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
         self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].op_name, 'aten::mm')
+            profile.kernel_list_groupby_name_op[0].name,
+            'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>')
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].op_name,
+                         'aten::mm')
         self.assertEqual(profile.kernel_list_groupby_name_op[0].calls, 1)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].total_duration, 200)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].min_duration, 200)
-        self.assertEqual(
-            profile.kernel_list_groupby_name_op[0].max_duration, 200)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].total_duration,
+                         200)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].min_duration,
+                         200)
+        self.assertEqual(profile.kernel_list_groupby_name_op[0].max_duration,
+                         200)
         self.assertEqual(profile.kernel_stat.iloc[0]['count'], 1)
         self.assertEqual(profile.kernel_stat.iloc[0]['sum'], 200)
         self.assertEqual(profile.kernel_stat.iloc[0]['mean'], 200)
@@ -878,8 +884,8 @@ class TestProfiler(unittest.TestCase):
         # The last 2 steps without kernels are removed from overall view.
         self.assertEqual(len(profile.steps_costs), 1)
         step = profile.steps_costs[0]
-        self.assertEqual(
-            step.costs[ProfileRole.Total], (150 + 180) - (90 + 20))
+        self.assertEqual(step.costs[ProfileRole.Total],
+                         (150 + 180) - (90 + 20))
 
     def test_pure_cpu(self):
         json_content = """
@@ -1010,19 +1016,22 @@ class TestProfiler(unittest.TestCase):
         profile.process()
 
         self.assertEqual(len(profile.gpu_metrics_parser.gpu_ids), 1)
-        self.assertAlmostEqual(profile.gpu_metrics_parser.gpu_utilization[1], (40 + 20) / 120)
-        self.assertAlmostEqual(profile.gpu_metrics_parser.avg_approximated_sm_efficiency_per_device[1],
-                               (0.5 * (135 - 130)
-                                + 1.0 * (140 - 135)
-                                + 0.6 * (145 - 140)
-                                + 0.9 * (150 - 145)
-                                + 0.3 * (170 - 150)
-                                + 1.0 * (220 - 200)) / (220 - 100))
-        self.assertAlmostEqual(profile.gpu_metrics_parser.avg_occupancy_per_device[1],
-                               (0.6 * 10 + 0.1 * 15 + 1.0 * 25 + 0.3 * 20) / (10 + 15 + 25 + 20))
+        self.assertAlmostEqual(profile.gpu_metrics_parser.gpu_utilization[1],
+                               (40 + 20) / 120)
+        self.assertAlmostEqual(
+            profile.gpu_metrics_parser.
+            avg_approximated_sm_efficiency_per_device[1],
+            (0.5 * (135 - 130) + 1.0 * (140 - 135) + 0.6 * (145 - 140) + 0.9 *
+             (150 - 145) + 0.3 * (170 - 150) + 1.0 *
+             (220 - 200)) / (220 - 100))
+        self.assertAlmostEqual(
+            profile.gpu_metrics_parser.avg_occupancy_per_device[1],
+            (0.6 * 10 + 0.1 * 15 + 1.0 * 25 + 0.3 * 20) / (10 + 15 + 25 + 20))
 
-        gpu_util_expected = [(100, 0), (110, 0), (120, 0), (130, 1.0), (140, 1.0), (150, 1.0), (160, 1.0),
-                             (170, 0), (180, 0), (190, 0), (200, 1.0), (210, 1.0), (220, 0)]
+        gpu_util_expected = [(100, 0), (110, 0), (120, 0), (130, 1.0),
+                             (140, 1.0), (150, 1.0), (160, 1.0), (170, 0),
+                             (180, 0), (190, 0), (200, 1.0), (210, 1.0),
+                             (220, 0)]
         for gpu_id in profile.gpu_metrics_parser.gpu_ids:
             buckets = profile.gpu_metrics_parser.gpu_util_buckets[gpu_id]
             gpu_util_id = 0
@@ -1032,19 +1041,22 @@ class TestProfiler(unittest.TestCase):
                 gpu_util_id += 1
             self.assertEqual(gpu_util_id, len(gpu_util_expected))
 
-        sm_efficiency_expected = [(130, 0.5), (135, 0), (135, 1.0), (140, 0), (140, 0.6), (145, 0), (145, 0.9),
-                                  (150, 0), (150, 0.3), (170, 0), (170, 0), (200, 0), (200, 1.0), (220, 0)]
+        sm_efficiency_expected = [(130, 0.5), (135, 0), (135, 1.0), (140, 0),
+                                  (140, 0.6), (145, 0), (145, 0.9), (150, 0),
+                                  (150, 0.3), (170, 0), (170, 0), (200, 0),
+                                  (200, 1.0), (220, 0)]
         for gpu_id in profile.gpu_metrics_parser.gpu_ids:
-            ranges = profile.gpu_metrics_parser.approximated_sm_efficiency_ranges[gpu_id]
+            ranges = profile.gpu_metrics_parser.approximated_sm_efficiency_ranges[
+                gpu_id]
             sm_efficiency_id = 0
             for r in ranges:
-                self.assertEqual(
-                    r[0], sm_efficiency_expected[sm_efficiency_id][0])
+                self.assertEqual(r[0],
+                                 sm_efficiency_expected[sm_efficiency_id][0])
                 self.assertAlmostEqual(
                     r[2], sm_efficiency_expected[sm_efficiency_id][1])
                 sm_efficiency_id += 1
-                self.assertEqual(
-                    r[1], sm_efficiency_expected[sm_efficiency_id][0])
+                self.assertEqual(r[1],
+                                 sm_efficiency_expected[sm_efficiency_id][0])
                 self.assertAlmostEqual(
                     0, sm_efficiency_expected[sm_efficiency_id][1])
                 sm_efficiency_id += 1
@@ -1058,10 +1070,10 @@ class TestProfiler(unittest.TestCase):
                 count += 1
             if agg_by_op.name == 'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>' and \
                     agg_by_op.op_name == 'aten::mm':
-                self.assertAlmostEqual(
-                    agg_by_op.avg_blocks_per_sm, (0.5 * 10 + 0.3 * 25) / (10 + 25))
-                self.assertAlmostEqual(
-                    agg_by_op.avg_occupancy, (0.6 * 10 + 1.0 * 25) / (10 + 25))
+                self.assertAlmostEqual(agg_by_op.avg_blocks_per_sm,
+                                       (0.5 * 10 + 0.3 * 25) / (10 + 25))
+                self.assertAlmostEqual(agg_by_op.avg_occupancy,
+                                       (0.6 * 10 + 1.0 * 25) / (10 + 25))
                 count += 1
             if agg_by_op.name == 'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>' and \
                     agg_by_op.op_name == 'aten::mat_mul':
@@ -1078,10 +1090,12 @@ class TestProfiler(unittest.TestCase):
                 self.assertAlmostEqual(row['occupancy'], 0.1)
                 count += 1
             if name == 'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>':
-                self.assertAlmostEqual(
-                    row['blocks_per_sm'], (0.5 * 10 + 0.3 * 25 + 10.5 * 20) / (10 + 25 + 20))
-                self.assertAlmostEqual(
-                    row['occupancy'], (0.6 * 10 + 1.0 * 25 + 0.3 * 20) / (10 + 25 + 20))
+                self.assertAlmostEqual(row['blocks_per_sm'],
+                                       (0.5 * 10 + 0.3 * 25 + 10.5 * 20) /
+                                       (10 + 25 + 20))
+                self.assertAlmostEqual(row['occupancy'],
+                                       (0.6 * 10 + 1.0 * 25 + 0.3 * 20) /
+                                       (10 + 25 + 20))
                 count += 1
         self.assertEqual(count, 2)
 
@@ -1143,9 +1157,12 @@ class TestProfiler(unittest.TestCase):
         profile.process()
 
         self.assertEqual(len(profile.gpu_metrics_parser.gpu_ids), 1)
-        self.assertAlmostEqual(profile.gpu_metrics_parser.gpu_utilization[1], 0.0)
-        self.assertTrue(profile.gpu_metrics_parser.avg_approximated_sm_efficiency_per_device[1] is None)
-        self.assertTrue(profile.gpu_metrics_parser.avg_occupancy_per_device[1] is None)
+        self.assertAlmostEqual(profile.gpu_metrics_parser.gpu_utilization[1],
+                               0.0)
+        self.assertTrue(profile.gpu_metrics_parser.
+                        avg_approximated_sm_efficiency_per_device[1] is None)
+        self.assertTrue(
+            profile.gpu_metrics_parser.avg_occupancy_per_device[1] is None)
         self.assertTrue(profile.gpu_metrics_parser.blocks_per_sm_count[1] > 0)
         self.assertTrue(profile.gpu_metrics_parser.occupancy_count[1] > 0)
 
@@ -1158,10 +1175,8 @@ class TestProfiler(unittest.TestCase):
                 count += 1
             if agg_by_op.name == 'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>' and \
                     agg_by_op.op_name == 'aten::mm':
-                self.assertAlmostEqual(
-                    agg_by_op.avg_blocks_per_sm, 10.5)
-                self.assertAlmostEqual(
-                    agg_by_op.avg_occupancy, 0.3)
+                self.assertAlmostEqual(agg_by_op.avg_blocks_per_sm, 10.5)
+                self.assertAlmostEqual(agg_by_op.avg_occupancy, 0.3)
                 count += 1
         self.assertEqual(count, 2)
 
@@ -1169,8 +1184,10 @@ class TestProfiler(unittest.TestCase):
         for _id, (name, row) in enumerate(profile.kernel_stat.iterrows()):
             # The kernel with zero 'dur' should be ignored.
             if name == 'void cunn_ClassNLLCriterion_updateGradInput_kernel<float>':
-                self.assertAlmostEqual(row['blocks_per_sm'], (20 * 0.5 + 25 * 10.5) / (20 + 25))
-                self.assertAlmostEqual(row['occupancy'], (20 * 0.6 + 25 * 0.3) / (20 + 25))
+                self.assertAlmostEqual(row['blocks_per_sm'],
+                                       (20 * 0.5 + 25 * 10.5) / (20 + 25))
+                self.assertAlmostEqual(row['occupancy'],
+                                       (20 * 0.6 + 25 * 0.3) / (20 + 25))
                 count += 1
         self.assertEqual(count, 1)
 
@@ -1178,13 +1195,13 @@ class TestProfiler(unittest.TestCase):
         profile = RunProfile('test_dump_gpu_metrics', None)
         # Faked data for easy to see in UI. Real data values are 1/100 of these.
         gpu_util_buckets = [[(1621401187223005, 0.0), (1621401187224005, 0.0),
-                            (1621401187225005, 0.6), (1621401187226005, 0.5),
-                            (1621401187227005, 0.6), (1621401187228005, 0.2),
-                            (1621401187229005, 0.6), (1621401187230005, 0.1),
-                            (1621401187231005, 0.5), (1621401187232005, 0.2),
-                            (1621401187233005, 0.3), (1621401187234005, 0.4),
-                            (1621401187235005, 0.4219409282700422),
-                            (1621401187236901, 0)]]
+                             (1621401187225005, 0.6), (1621401187226005, 0.5),
+                             (1621401187227005, 0.6), (1621401187228005, 0.2),
+                             (1621401187229005, 0.6), (1621401187230005, 0.1),
+                             (1621401187231005, 0.5), (1621401187232005, 0.2),
+                             (1621401187233005, 0.3), (1621401187234005, 0.4),
+                             (1621401187235005, 0.4219409282700422),
+                             (1621401187236901, 0)]]
         # Faked data for easy to see in UI. Real data values are 1/10 of these.
         approximated_sm_efficiency_ranges = \
             [[(1621401187225275, 1621401187225278, 0.25), (1621401187225530, 1621401187225532, 0.125),
@@ -1215,7 +1232,8 @@ class TestProfiler(unittest.TestCase):
         data_with_gpu_metrics_flat = gzip.decompress(
             data_with_gpu_metrics_compressed)
 
-        trace_json_expected_path = os.path.join(basedir, 'gpu_metrics_expected.json')
+        trace_json_expected_path = os.path.join(basedir,
+                                                'gpu_metrics_expected.json')
         with open(trace_json_expected_path, 'rb') as file:
             data_expected = file.read()
 
@@ -1223,17 +1241,20 @@ class TestProfiler(unittest.TestCase):
         data_with_gpu_metrics_json = json.loads(
             data_with_gpu_metrics_flat.decode('utf8'))
         data_expected_json = json.loads(data_expected.decode('utf8'))
-        data_with_gpu_metrics_str = json.dumps(
-            data_with_gpu_metrics_json, sort_keys=True)
+        data_with_gpu_metrics_str = json.dumps(data_with_gpu_metrics_json,
+                                               sort_keys=True)
         data_expected_str = json.dumps(data_expected_json, sort_keys=True)
 
         self.assertEqual(data_with_gpu_metrics_str, data_expected_str)
+        print(data_with_gpu_metrics_str)
 
         try:
             _ = json.loads(data_with_gpu_metrics_flat.decode('utf8'))
         except Exception:
             self.assertTrue(
-                False, 'The string fails to be parsed by json after appending gpu metrics.')
+                False,
+                'The string fails to be parsed by json after appending gpu metrics.'
+            )
 
     def test_memory_view(self):
         json_content = """[
@@ -1604,7 +1625,8 @@ class TestProfiler(unittest.TestCase):
 
         profile = parse_json_trace(json_content)
         profile.process()
-        memory_stats = profile.memory_snapshot.get_memory_statistics(profile.tid2tree)
+        memory_stats = profile.memory_snapshot.get_memory_statistics(
+            profile.tid2tree)
 
         self.assertEqual(len(memory_stats), 2)
         self.assertIn('GPU0', memory_stats)
@@ -1630,10 +1652,8 @@ class TestProfiler(unittest.TestCase):
             'aten::t': [0, 0, 0, 50, 50, 1, 1]
         }
 
-        validate_data = [
-            (memory_stats['CPU'], cpu_expected_data),
-            (memory_stats['GPU0'], gpu_expected_data)
-        ]
+        validate_data = [(memory_stats['CPU'], cpu_expected_data),
+                         (memory_stats['GPU0'], gpu_expected_data)]
         for (mem_stat, expected_data) in validate_data:
             for name, values in expected_data.items():
                 self.assertEqual(mem_stat[name], values)
@@ -1751,20 +1771,29 @@ class TestProfiler(unittest.TestCase):
             }
         ]
         index = 0
-        self.assertEqual(len(profile.kernel_list_groupby_name_op), len(expected_agg_kernels))
+        self.assertEqual(len(profile.kernel_list_groupby_name_op),
+                         len(expected_agg_kernels))
         for agg_kernel in profile.kernel_list_groupby_name_op:
             expected_agg_kernel = expected_agg_kernels[index]
             self.assertEqual(agg_kernel.name, expected_agg_kernel['name'])
-            self.assertEqual(agg_kernel.op_name, expected_agg_kernel['op_name'])
+            self.assertEqual(agg_kernel.op_name,
+                             expected_agg_kernel['op_name'])
             self.assertEqual(str(agg_kernel.grid), expected_agg_kernel['grid'])
-            self.assertEqual(str(agg_kernel.block), expected_agg_kernel['block'])
-            self.assertEqual(agg_kernel.regs_per_thread, expected_agg_kernel['registers per thread'])
-            self.assertEqual(agg_kernel.shared_memory, expected_agg_kernel['shared memory'])
+            self.assertEqual(str(agg_kernel.block),
+                             expected_agg_kernel['block'])
+            self.assertEqual(agg_kernel.regs_per_thread,
+                             expected_agg_kernel['registers per thread'])
+            self.assertEqual(agg_kernel.shared_memory,
+                             expected_agg_kernel['shared memory'])
             self.assertEqual(agg_kernel.calls, expected_agg_kernel['calls'])
-            self.assertEqual(agg_kernel.total_duration, expected_agg_kernel['total_duration'])
-            self.assertAlmostEqual(agg_kernel.avg_duration, expected_agg_kernel['avg_duration'])
-            self.assertEqual(agg_kernel.min_duration, expected_agg_kernel['min_duration'])
-            self.assertEqual(agg_kernel.max_duration, expected_agg_kernel['max_duration'])
+            self.assertEqual(agg_kernel.total_duration,
+                             expected_agg_kernel['total_duration'])
+            self.assertAlmostEqual(agg_kernel.avg_duration,
+                                   expected_agg_kernel['avg_duration'])
+            self.assertEqual(agg_kernel.min_duration,
+                             expected_agg_kernel['min_duration'])
+            self.assertEqual(agg_kernel.max_duration,
+                             expected_agg_kernel['max_duration'])
             index += 1
 
     # Test group by 'kernel detail + op name' with invalid input lack of some kernel field
@@ -1844,89 +1873,92 @@ class TestProfiler(unittest.TestCase):
         """
         profile = parse_json_trace(json_content)
         profile.process()
-        expected_agg_kernels = [
-            {
-                'name': 'kernel1',
-                'op_name': 'op1',
-                'grid': None,
-                'block': [16, 16, 16],
-                'registers per thread': 18,
-                'shared memory': 0,
-                'calls': 1,
-                'total_duration': 1,
-                'avg_duration': 1,
-                'min_duration': 1,
-                'max_duration': 1
-            },
-            {
-                'name': 'kernel1',
-                'op_name': 'op1',
-                'grid': [16, 1, 1],
-                'block': None,
-                'registers per thread': 18,
-                'shared memory': 0,
-                'calls': 1,
-                'total_duration': 2,
-                'avg_duration': 2,
-                'min_duration': 2,
-                'max_duration': 2
-            },
-            {
-                'name': 'kernel1',
-                'op_name': 'op1',
-                'grid': [16, 1, 1],
-                'block': [16, 16, 16],
-                'registers per thread': None,
-                'shared memory': 0,
-                'calls': 1,
-                'total_duration': 3,
-                'avg_duration': 3,
-                'min_duration': 3,
-                'max_duration': 3
-            },
-            {
-                'name': 'kernel1',
-                'op_name': 'op1',
-                'grid': [16, 1, 1],
-                'block': [16, 16, 16],
-                'registers per thread': 18,
-                'shared memory': None,
-                'calls': 1,
-                'total_duration': 4,
-                'avg_duration': 4,
-                'min_duration': 4,
-                'max_duration': 4
-            },
-            {
-                'name': 'kernel1',
-                'op_name': 'op1',
-                'grid': None,
-                'block': None,
-                'registers per thread': None,
-                'shared memory': None,
-                'calls': 1,
-                'total_duration': 5,
-                'avg_duration': 5,
-                'min_duration': 5,
-                'max_duration': 5
-            }
-        ]
+        expected_agg_kernels = [{
+            'name': 'kernel1',
+            'op_name': 'op1',
+            'grid': None,
+            'block': [16, 16, 16],
+            'registers per thread': 18,
+            'shared memory': 0,
+            'calls': 1,
+            'total_duration': 1,
+            'avg_duration': 1,
+            'min_duration': 1,
+            'max_duration': 1
+        }, {
+            'name': 'kernel1',
+            'op_name': 'op1',
+            'grid': [16, 1, 1],
+            'block': None,
+            'registers per thread': 18,
+            'shared memory': 0,
+            'calls': 1,
+            'total_duration': 2,
+            'avg_duration': 2,
+            'min_duration': 2,
+            'max_duration': 2
+        }, {
+            'name': 'kernel1',
+            'op_name': 'op1',
+            'grid': [16, 1, 1],
+            'block': [16, 16, 16],
+            'registers per thread': None,
+            'shared memory': 0,
+            'calls': 1,
+            'total_duration': 3,
+            'avg_duration': 3,
+            'min_duration': 3,
+            'max_duration': 3
+        }, {
+            'name': 'kernel1',
+            'op_name': 'op1',
+            'grid': [16, 1, 1],
+            'block': [16, 16, 16],
+            'registers per thread': 18,
+            'shared memory': None,
+            'calls': 1,
+            'total_duration': 4,
+            'avg_duration': 4,
+            'min_duration': 4,
+            'max_duration': 4
+        }, {
+            'name': 'kernel1',
+            'op_name': 'op1',
+            'grid': None,
+            'block': None,
+            'registers per thread': None,
+            'shared memory': None,
+            'calls': 1,
+            'total_duration': 5,
+            'avg_duration': 5,
+            'min_duration': 5,
+            'max_duration': 5
+        }]
         index = 0
-        self.assertEqual(len(profile.kernel_list_groupby_name_op), len(expected_agg_kernels))
+        self.assertEqual(len(profile.kernel_list_groupby_name_op),
+                         len(expected_agg_kernels))
         for agg_kernel in profile.kernel_list_groupby_name_op:
             expected_agg_kernel = expected_agg_kernels[index]
             self.assertEqual(agg_kernel.name, expected_agg_kernel['name'])
-            self.assertEqual(agg_kernel.op_name, expected_agg_kernel['op_name'])
+            self.assertEqual(agg_kernel.op_name,
+                             expected_agg_kernel['op_name'])
             self.assertEqual(agg_kernel.grid, expected_agg_kernel['grid'])
             self.assertEqual(agg_kernel.block, expected_agg_kernel['block'])
-            self.assertEqual(agg_kernel.regs_per_thread, expected_agg_kernel['registers per thread'])
-            print(agg_kernel.name, agg_kernel.grid, agg_kernel.block, agg_kernel.shared_memory)
-            self.assertEqual(agg_kernel.shared_memory, expected_agg_kernel['shared memory'])
+            self.assertEqual(agg_kernel.regs_per_thread,
+                             expected_agg_kernel['registers per thread'])
+            print(agg_kernel.name, agg_kernel.grid, agg_kernel.block,
+                  agg_kernel.shared_memory)
+            self.assertEqual(agg_kernel.shared_memory,
+                             expected_agg_kernel['shared memory'])
             self.assertEqual(agg_kernel.calls, expected_agg_kernel['calls'])
-            self.assertEqual(agg_kernel.total_duration, expected_agg_kernel['total_duration'])
-            self.assertAlmostEqual(agg_kernel.avg_duration, expected_agg_kernel['avg_duration'])
-            self.assertEqual(agg_kernel.min_duration, expected_agg_kernel['min_duration'])
-            self.assertEqual(agg_kernel.max_duration, expected_agg_kernel['max_duration'])
+            self.assertEqual(agg_kernel.total_duration,
+                             expected_agg_kernel['total_duration'])
+            self.assertAlmostEqual(agg_kernel.avg_duration,
+                                   expected_agg_kernel['avg_duration'])
+            self.assertEqual(agg_kernel.min_duration,
+                             expected_agg_kernel['min_duration'])
+            self.assertEqual(agg_kernel.max_duration,
+                             expected_agg_kernel['max_duration'])
             index += 1
 
     # Test tensor core related feature.
@@ -1997,12 +2029,16 @@ class TestProfiler(unittest.TestCase):
                 'tc_total_ratio': 1.0
             }
         }
-        self.assertEqual(len(profile.op_list_groupby_name), len(expected_agg_ops))
+        self.assertEqual(len(profile.op_list_groupby_name),
+                         len(expected_agg_ops))
         for agg_op in profile.op_list_groupby_name:
             expected_agg_op = expected_agg_ops[agg_op.name]
-            self.assertEqual(agg_op.tc_eligible, expected_agg_op['tc_eligible'])
-            self.assertAlmostEqual(agg_op.tc_self_ratio, expected_agg_op['tc_self_ratio'])
-            self.assertAlmostEqual(agg_op.tc_total_ratio, expected_agg_op['tc_total_ratio'])
+            self.assertEqual(agg_op.tc_eligible,
+                             expected_agg_op['tc_eligible'])
+            self.assertAlmostEqual(agg_op.tc_self_ratio,
+                                   expected_agg_op['tc_self_ratio'])
+            self.assertAlmostEqual(agg_op.tc_total_ratio,
+                                   expected_agg_op['tc_total_ratio'])
 
         expected_kernels_groupby_op = {
             'kernel_no_tc': {
@@ -2010,25 +2046,30 @@ class TestProfiler(unittest.TestCase):
                 'tc_used': False,
                 'op_tc_eligible': False
             },
-            'volta_fp16_s884cudnn_fp16_128x128_ldg8_splitK_relu_f2f_exp_small_nhwc_tn_v1': {
+            'volta_fp16_s884cudnn_fp16_128x128_ldg8_splitK_relu_f2f_exp_small_nhwc_tn_v1':
+            {
                 'op_name': 'aten::cudnn_convolution',
                 'tc_used': True,
                 'op_tc_eligible': True
             }
         }
-        self.assertEqual(len(profile.kernel_list_groupby_name_op), len(expected_kernels_groupby_op))
+        self.assertEqual(len(profile.kernel_list_groupby_name_op),
+                         len(expected_kernels_groupby_op))
         for agg_kernel in profile.kernel_list_groupby_name_op:
             expected_agg_kernel = expected_kernels_groupby_op[agg_kernel.name]
-            self.assertEqual(agg_kernel.op_name, expected_agg_kernel['op_name'])
-            self.assertEqual(agg_kernel.tc_used, expected_agg_kernel['tc_used'])
-            self.assertEqual(agg_kernel.op_tc_eligible, expected_agg_kernel['op_tc_eligible'])
+            self.assertEqual(agg_kernel.op_name,
+                             expected_agg_kernel['op_name'])
+            self.assertEqual(agg_kernel.tc_used,
+                             expected_agg_kernel['tc_used'])
+            self.assertEqual(agg_kernel.op_tc_eligible,
+                             expected_agg_kernel['op_tc_eligible'])
 
         self.assertAlmostEqual(profile.tc_ratio[0], 15 / (15 + 10))
-        self.assertAlmostEqual(profile.tc_eligible_ops_kernel_ratio, 15 / (15 + 10))
+        self.assertAlmostEqual(profile.tc_eligible_ops_kernel_ratio,
+                               15 / (15 + 10))
 
 
 class TestDistributed(unittest.TestCase):
-
     def test_distributed_nccl(self):
         json_content0 = """[
             {
@@ -2113,7 +2154,8 @@ class TestDistributed(unittest.TestCase):
         dist_data0 = DistributedRunProfileData(profile0)
         self.assertTrue(profile0.has_communication)
         self.assertEqual(len(profile0.comm_node_list), 2)
-        self.assertEqual(profile0.steps_costs[0].costs, [105, 0, 0, 16, 0, 0, 79, 35, 235])
+        self.assertEqual(profile0.steps_costs[0].costs,
+                         [105, 0, 0, 16, 0, 0, 79, 35, 235])
 
         profile1 = parse_json_trace(json_content1, 'worker1')
         dist_data1 = DistributedRunProfileData(profile1)
@@ -2122,17 +2164,24 @@ class TestDistributed(unittest.TestCase):
         self.assertEqual(profile1.steps_costs[0].costs[3], 22)
 
         loader = RunLoader('test_nccl', '', None)
-        dist_profile = loader._process_distributed_profiles([dist_data0, dist_data1], 0)
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'], [32, 73, 16, 114])
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'], [152, 9, 22, 52])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'], [1074, 498])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'], [1074, 15])
-        self.assertEqual(dist_profile.comm_ops['data']['worker0']['rows'],
-                         [['nccl:broadcast', 1, 212480, 212480, 16, 16, 16, 16],
-                          ['nccl:all_reduce', 1, 8196000, 8196000, 1556, 1556, 1058, 1058]])
-        self.assertEqual(dist_profile.comm_ops['data']['worker1']['rows'],
-                         [['nccl:broadcast', 1, 212480, 212480, 31, 31, 16, 16],
-                          ['nccl:all_reduce', 1, 8196000, 8196000, 1058, 1058, 1058, 1058]])
+        dist_profile = loader._process_distributed_profiles(
+            [dist_data0, dist_data1], 0)
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'],
+                         [32, 73, 16, 114])
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'],
+                         [152, 9, 22, 52])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'],
+                         [1074, 498])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'],
+                         [1074, 15])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker0']['rows'],
+            [['nccl:broadcast', 1, 212480, 212480, 16, 16, 16, 16],
+             ['nccl:all_reduce', 1, 8196000, 8196000, 1556, 1556, 1058, 1058]])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker1']['rows'],
+            [['nccl:broadcast', 1, 212480, 212480, 31, 31, 16, 16],
+             ['nccl:all_reduce', 1, 8196000, 8196000, 1058, 1058, 1058, 1058]])
 
     def test_distributed_gloo_gpu(self):
         json_content0 = """[
@@ -2230,26 +2279,35 @@ class TestDistributed(unittest.TestCase):
         dist_data0 = DistributedRunProfileData(profile0)
         self.assertTrue(profile0.has_communication)
         self.assertEqual(len(profile0.comm_node_list), 5)
-        self.assertEqual(profile0.steps_costs[0].costs, [101, 0, 0, 39, 0, 0, 16, 0, 156])
+        self.assertEqual(profile0.steps_costs[0].costs,
+                         [101, 0, 0, 39, 0, 0, 16, 0, 156])
 
         profile1 = parse_json_trace(json_content1, 'worker1')
         dist_data1 = DistributedRunProfileData(profile1)
         self.assertTrue(profile1.has_communication)
         self.assertEqual(len(profile1.comm_node_list), 5)
-        self.assertEqual(profile1.steps_costs[0].costs, [70, 0, 0, 44, 0, 0, 20, 12, 146])
+        self.assertEqual(profile1.steps_costs[0].costs,
+                         [70, 0, 0, 44, 0, 0, 20, 12, 146])
 
         loader = RunLoader('test_gloo_gpu', '', None)
-        dist_profile = loader._process_distributed_profiles([dist_data0, dist_data1], 0)
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'], [31, 70, 39, 16])
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'], [16, 54, 44, 32])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'], [75, 34])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'], [78, 20])
-        self.assertEqual(dist_profile.comm_ops['data']['worker0']['rows'],
-                         [['gloo:broadcast', 3, 637440, 212480, 63, 21, 41, 14],
-                          ['gloo:all_reduce', 2, 16392000, 8196000, 46, 23, 34, 17]])
-        self.assertEqual(dist_profile.comm_ops['data']['worker1']['rows'],
-                         [['gloo:broadcast', 3, 637440, 212480, 44, 15, 44, 15],
-                          ['gloo:all_reduce', 2, 16392000, 8196000, 54, 27, 34, 17]])
+        dist_profile = loader._process_distributed_profiles(
+            [dist_data0, dist_data1], 0)
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'],
+                         [31, 70, 39, 16])
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'],
+                         [16, 54, 44, 32])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'],
+                         [75, 34])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'],
+                         [78, 20])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker0']['rows'],
+            [['gloo:broadcast', 3, 637440, 212480, 63, 21, 41, 14],
+             ['gloo:all_reduce', 2, 16392000, 8196000, 46, 23, 34, 17]])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker1']['rows'],
+            [['gloo:broadcast', 3, 637440, 212480, 44, 15, 44, 15],
+             ['gloo:all_reduce', 2, 16392000, 8196000, 54, 27, 34, 17]])
 
     def test_distributed_gloo_cpu(self):
         json_content0 = """[
@@ -2347,66 +2405,81 @@ class TestDistributed(unittest.TestCase):
         dist_data0 = DistributedRunProfileData(profile0)
         self.assertTrue(profile0.has_communication)
         self.assertEqual(len(profile0.comm_node_list), 5)
-        self.assertEqual(profile0.steps_costs[0].costs, [0, 0, 0, 109, 0, 0, 47, 0, 156])
+        self.assertEqual(profile0.steps_costs[0].costs,
+                         [0, 0, 0, 109, 0, 0, 47, 0, 156])
 
         profile1 = parse_json_trace(json_content1, 'worker1')
         dist_data1 = DistributedRunProfileData(profile1)
         self.assertTrue(profile1.has_communication)
         self.assertEqual(len(profile1.comm_node_list), 5)
-        self.assertEqual(profile1.steps_costs[0].costs, [0, 0, 0, 98, 0, 0, 36, 12, 146])
+        self.assertEqual(profile1.steps_costs[0].costs,
+                         [0, 0, 0, 98, 0, 0, 36, 12, 146])
 
         loader = RunLoader('test_gloo_cpu', '', None)
-        dist_profile = loader._process_distributed_profiles([dist_data0, dist_data1], 0)
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'], [47, 74, 35, 0])
-        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'], [36, 64, 34, 12])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'], [75, 34])
-        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'], [78, 20])
-        self.assertEqual(dist_profile.comm_ops['data']['worker0']['rows'],
-                         [['gloo:broadcast', 3, 637440, 212480, 63, 21, 41, 14],
-                          ['gloo:all_reduce', 2, 16392000, 8196000, 46, 23, 34, 17]])
-        self.assertEqual(dist_profile.comm_ops['data']['worker1']['rows'],
-                         [['gloo:broadcast', 3, 637440, 212480, 44, 15, 44, 15],
-                          ['gloo:all_reduce', 2, 16392000, 8196000, 54, 27, 34, 17]])
+        dist_profile = loader._process_distributed_profiles(
+            [dist_data0, dist_data1], 0)
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker0'],
+                         [47, 74, 35, 0])
+        self.assertEqual(dist_profile.steps_to_overlap['data']['0']['worker1'],
+                         [36, 64, 34, 12])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker0'],
+                         [75, 34])
+        self.assertEqual(dist_profile.steps_to_wait['data']['0']['worker1'],
+                         [78, 20])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker0']['rows'],
+            [['gloo:broadcast', 3, 637440, 212480, 63, 21, 41, 14],
+             ['gloo:all_reduce', 2, 16392000, 8196000, 46, 23, 34, 17]])
+        self.assertEqual(
+            dist_profile.comm_ops['data']['worker1']['rows'],
+            [['gloo:broadcast', 3, 637440, 212480, 44, 15, 44, 15],
+             ['gloo:all_reduce', 2, 16392000, 8196000, 54, 27, 34, 17]])
 
 
 class TestMemoryCurve(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.event_data_cpu = [
-            [1, 0, 0, 1, 4, 4, 0],          # alloc 1
-            [20, 0, 0, 1, -4, 0, 0],        # free  1
+            [1, 0, 0, 1, 4, 4, 0],  # alloc 1
+            [20, 0, 0, 1, -4, 0, 0],  # free  1
             [100, 0, 0, 2, 8000, 8000, 0],  # alloc 2
-            [200, 0, 0, 2, -8000, 0, 0],    # free  2
-            [300, 0, 0, 3, 4, 4, 0],        # alloc 3
-            [400, 0, 0, 4, 16, 20, 0],      # alloc 4
+            [200, 0, 0, 2, -8000, 0, 0],  # free  2
+            [300, 0, 0, 3, 4, 4, 0],  # alloc 3
+            [400, 0, 0, 4, 16, 20, 0],  # alloc 4
             [500, 0, 0, 5, 4000, 4020, 0],  # alloc 5
-            [600, 0, 0, 4, -16, 4004, 0],   # free  4
-            [700, 0, 0, 7, 80, 4084, 0],    # alloc 7
-            [800, 0, 0, 3, -4, 4080, 0],    # free  3
-            [900, 0, 0, 7, -80, 4000, 0],   # free  7
-            [905, 0, 0, 4, -4000, 0, 0],    # free  5
+            [600, 0, 0, 4, -16, 4004, 0],  # free  4
+            [700, 0, 0, 7, 80, 4084, 0],  # alloc 7
+            [800, 0, 0, 3, -4, 4080, 0],  # free  3
+            [900, 0, 0, 7, -80, 4000, 0],  # free  7
+            [905, 0, 0, 4, -4000, 0, 0],  # free  5
         ]
 
         self.event_data_gpu = [
-            [2, 1, 0, 11, 400, 400, 512],         # alloc 11
-            [22, 1, 0, 11, -400, 0, 512],         # free  11
-            [105, 1, 0, 12, 5000, 5000, 10240],   # alloc 12
-            [106, 1, 0, 13, 3000, 8000, 10240],   # alloc 13
+            [2, 1, 0, 11, 400, 400, 512],  # alloc 11
+            [22, 1, 0, 11, -400, 0, 512],  # free  11
+            [105, 1, 0, 12, 5000, 5000, 10240],  # alloc 12
+            [106, 1, 0, 13, 3000, 8000, 10240],  # alloc 13
             [205, 1, 0, 12, -5000, 3000, 10240],  # free  12
-            [401, 1, 0, 14, 1024, 4024, 10240],   # alloc 14
-            [499, 1, 0, 15, 4, 4028, 10240],      # alloc 15
+            [401, 1, 0, 14, 1024, 4024, 10240],  # alloc 14
+            [499, 1, 0, 15, 4, 4028, 10240],  # alloc 15
             [501, 1, 0, 13, -3000, 1028, 10240],  # free  13
-            [502, 1, 0, 15, -4, 1024, 10240],     # free  15
-            [906, 1, 0, 14, -1024, 0, 10240],     # free  14
+            [502, 1, 0, 15, -4, 1024, 10240],  # free  15
+            [906, 1, 0, 14, -1024, 0, 10240],  # free  14
         ]
 
-        self.all_events = sorted(self.event_data_cpu + self.event_data_gpu, key=lambda e: e[0])
+        self.all_events = sorted(self.event_data_cpu + self.event_data_gpu,
+                                 key=lambda e: e[0])
 
-    def entry(self, ts, dev, dev_id, addr, alloc_size, total_allocated, total_reserved):
+    def entry(self, ts, dev, dev_id, addr, alloc_size, total_allocated,
+              total_reserved):
         return {
-            'ph': 'i', 's': 't', 'name': '[memory]', 'pid': 0, 'tid': 0, 'ts': ts,
+            'ph': 'i',
+            's': 't',
+            'name': '[memory]',
+            'pid': 0,
+            'tid': 0,
+            'ts': ts,
             'args': {
                 'Device Type': dev,
                 'Device Id': dev_id,
@@ -2418,11 +2491,15 @@ class TestMemoryCurve(unittest.TestCase):
         }
 
     def test_memory_curve_no_step_plot(self):
-        json_content = json.dumps([self.entry(*data) for data in self.all_events])
+        json_content = json.dumps(
+            [self.entry(*data) for data in self.all_events])
 
         profile = parse_json_trace(json_content)
         profile.process()
-        result = RunProfile.get_memory_curve(profile, time_metric='us', memory_metric='B', patch_for_step_plot=False)
+        result = RunProfile.get_memory_curve(profile,
+                                             time_metric='us',
+                                             memory_metric='B',
+                                             patch_for_step_plot=False)
 
         start_ts = profile.profiler_start_ts
         self.assertEqual(1, start_ts)
@@ -2435,7 +2512,8 @@ class TestMemoryCurve(unittest.TestCase):
         self.assertEqual(len(self.event_data_cpu), len(curves['CPU']))
         for i in range(len(self.event_data_cpu)):
             # adjusted timestamp
-            self.assertEqual(self.event_data_cpu[i][0] - start_ts,  curves['CPU'][i][0])
+            self.assertEqual(self.event_data_cpu[i][0] - start_ts,
+                             curves['CPU'][i][0])
             # total allocated
             self.assertEqual(self.event_data_cpu[i][-2], curves['CPU'][i][1])
             # total reserved
@@ -2443,16 +2521,21 @@ class TestMemoryCurve(unittest.TestCase):
 
         self.assertEqual(len(self.event_data_gpu), len(curves['GPU0']))
         for i in range(len(self.event_data_gpu)):
-            self.assertEqual(self.event_data_gpu[i][0] - start_ts,  curves['GPU0'][i][0])
+            self.assertEqual(self.event_data_gpu[i][0] - start_ts,
+                             curves['GPU0'][i][0])
             self.assertEqual(self.event_data_gpu[i][-2], curves['GPU0'][i][1])
             self.assertEqual(self.event_data_gpu[i][-1], curves['GPU0'][i][2])
 
     def test_memory_curve_step_plot(self):
-        json_content = json.dumps([self.entry(*data) for data in self.all_events])
+        json_content = json.dumps(
+            [self.entry(*data) for data in self.all_events])
 
         profile = parse_json_trace(json_content)
         profile.process()
-        result = RunProfile.get_memory_curve(profile, time_metric='us', memory_metric='B', patch_for_step_plot=True)
+        result = RunProfile.get_memory_curve(profile,
+                                             time_metric='us',
+                                             memory_metric='B',
+                                             patch_for_step_plot=True)
 
         start_ts = profile.profiler_start_ts
         self.assertEqual(1, start_ts)
@@ -2466,30 +2549,41 @@ class TestMemoryCurve(unittest.TestCase):
         for i in range(len(curves['CPU'])):
             if i % 2 == 0:  # original values
                 # adjusted timestamp
-                self.assertEqual(self.event_data_cpu[i//2][0] - start_ts,  curves['CPU'][i][0])
+                self.assertEqual(self.event_data_cpu[i // 2][0] - start_ts,
+                                 curves['CPU'][i][0])
                 # total allocated
-                self.assertEqual(self.event_data_cpu[i//2][-2], curves['CPU'][i][1])
+                self.assertEqual(self.event_data_cpu[i // 2][-2],
+                                 curves['CPU'][i][1])
                 # total reserved
-                self.assertEqual(self.event_data_cpu[i//2][-1], curves['CPU'][i][2])
+                self.assertEqual(self.event_data_cpu[i // 2][-1],
+                                 curves['CPU'][i][2])
             else:  # interpolated values
-                self.assertEqual(self.event_data_cpu[i//2+1][0] - start_ts,  curves['CPU'][i][0])
-                self.assertEqual(self.event_data_cpu[i//2][-2], curves['CPU'][i][1])
-                self.assertEqual(self.event_data_cpu[i//2][-1], curves['CPU'][i][2])
+                self.assertEqual(self.event_data_cpu[i // 2 + 1][0] - start_ts,
+                                 curves['CPU'][i][0])
+                self.assertEqual(self.event_data_cpu[i // 2][-2],
+                                 curves['CPU'][i][1])
+                self.assertEqual(self.event_data_cpu[i // 2][-1],
+                                 curves['CPU'][i][2])
 
         self.assertEqual(2 * len(self.event_data_gpu) - 1, len(curves['GPU0']))
         for i in range(len(self.event_data_gpu)):
             if i % 2 == 0:  # original values
-                self.assertEqual(self.event_data_gpu[i//2][0] - start_ts,  curves['GPU0'][i][0])
-                self.assertEqual(self.event_data_gpu[i//2][-2], curves['GPU0'][i][1])
-                self.assertEqual(self.event_data_gpu[i//2][-1], curves['GPU0'][i][2])
+                self.assertEqual(self.event_data_gpu[i // 2][0] - start_ts,
+                                 curves['GPU0'][i][0])
+                self.assertEqual(self.event_data_gpu[i // 2][-2],
+                                 curves['GPU0'][i][1])
+                self.assertEqual(self.event_data_gpu[i // 2][-1],
+                                 curves['GPU0'][i][2])
             else:  # interpolated values
-                self.assertEqual(self.event_data_gpu[i//2+1][0] - start_ts,  curves['GPU0'][i][0])
-                self.assertEqual(self.event_data_gpu[i//2][-2], curves['GPU0'][i][1])
-                self.assertEqual(self.event_data_gpu[i//2][-1], curves['GPU0'][i][2])
+                self.assertEqual(self.event_data_gpu[i // 2 + 1][0] - start_ts,
+                                 curves['GPU0'][i][0])
+                self.assertEqual(self.event_data_gpu[i // 2][-2],
+                                 curves['GPU0'][i][1])
+                self.assertEqual(self.event_data_gpu[i // 2][-1],
+                                 curves['GPU0'][i][2])
 
 
 class TestModuleView(unittest.TestCase):
-
     def test_build_module_hierarchy(self):
         from torch_tb_profiler.profiler import trace
         from torch_tb_profiler.profiler.module_op import (
@@ -2521,6 +2615,23 @@ class TestModuleView(unittest.TestCase):
                     "Python id": 2,
                     "Python parent id": 1,
                     "Python module id": 0
+                }
+            },
+            {
+                "ph": "X", "cat": "kernel", "name": "void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char*, long)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<2> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char*, long)#1} const&)::{lambda(int)#1})", "pid": 6, "tid": 7,
+                "ts": 1677207456880651, "dur": 8,
+                "args": {
+                "External id": 2040120,
+                
+                "queued": 0, "device": 6, "context": 1,
+                "stream": 7, "correlation": 2040120,
+                "registers per thread": 40,
+                "shared memory": 0,
+                "blocks per SM": 2.3703704,
+                "warps per SM": 9.481482,
+                "grid": [256, 1, 1],
+                "block": [128, 1, 1],
+                "est. achieved occupancy %": 15
                 }
             },
             {
@@ -2657,24 +2768,96 @@ class TestModuleView(unittest.TestCase):
             }
         ]
         """
-        data = parse_json_trace(json_content)
-        stats = aggegate_module_view(data.tid2tree, data.events)
-        stats.sort(key=lambda x: x.name)
-        self.assertEqual(2, len(stats))
-        self.assertEqual('Conv2', stats[0].name)
-        self.assertEqual('MyModule', stats[1].name)
-        self.assertEqual(1, len(stats[1].children))
-        self.assertEqual('Linear', stats[1].children[0].name)
 
-        content = json.loads(json_content)
+        # data = parse_json_trace(json_content)
+        # roots = _build_module_hierarchy(data.events)
+        # dump_modules(0, roots)
+        # stats = aggegate_module_view(data.tid2tree, data.events)
 
-        events = []
-        for data in content:
-            event = trace.create_event(data, False)
-            events.append(event)
+        # stats.sort(key=lambda x: x.name)
+        # print(type(stats[0]))
+        # self.assertEqual(2, len(stats))
+        # self.assertEqual('Conv2', stats[0].name)
+        # self.assertEqual('MyModule', stats[1].name)
+        # self.assertEqual(1, len(stats[1].children))
+        # self.assertEqual('Linear', stats[1].children[0].name)
 
+        # return
+
+        # with open(
+        #         "/mnt/petrelfs/wangguoteng.p/train_llm/one-rank/SH-IDC1-10-140-1-172_107933.1677207486555.pt.trace.json",
+        #         'r') as load_f:
+        #     content = json.load(load_f)
+        # print(content.keys())
+        # print(type(content['traceEvents']))
+        # print(type(content['traceEvents'][0]))
+
+        # events = []
+        # for event in content['traceEvents']:
+        #     event = trace.create_event(event, False)
+        #     if event is None:
+        #         continue
+        #     events.append(event)
+
+        profile = parse_json_trace(json_content)
+
+        from torch_tb_profiler.profiler.module_op import ModuleStats, Stats
+        from typing import List
+
+        def dump_modules(level: int, modules, smap: dict):
+            """testing purpose"""
+            for module in modules:
+                stat = smap[module.module_id]
+                print(
+                    f"{'    ' * level}{module.name.replace('nn.Module: ', '')}_{module.module_id}: {stat.host_duration}"
+                )
+                dump_modules(level + 1, module.children, smap)
+
+        def dump_modules_new(level: int, stats: List[Stats]):
+            """testing purpose"""
+            for stat in stats:
+                print(
+                    f"{'    ' * level}{stat.name.replace('nn.Module: ', '')}_{stat.id}: {stat.host_duration} , {stat.device_duration}"
+                )
+                dump_modules_new(level + 1, stat.children)
+
+        # smap = {}
+        # profile = RunProfileData.from_json(WORKER_NAME, -9999, content)
+        # from torch_tb_profiler.profiler.node import (DurationEvent, EventTypes,
+        #                                              KernelEvent, ModuleEvent,
+        #                                              OperatorEvent,
+        #                                              PLProfileEvent)
+
+        # print(profile.op_list_groupby_name)
+        stats = aggegate_module_view(profile.tid2tree, profile.events)
+        dump_modules_new(0, stats)
+        return
+        # print("--------------------------------------------")
+        for event in profile.events:
+            if isinstance(event, ModuleEvent):
+                print(
+                    f"{event.name}, type:{event.type}, moudle_id:{event.module_id}, "
+                )
+            elif isinstance(event, KernelEvent):
+                print(f"{event.name}, type:{event.type}, moudle_id:{event}, ")
+        print("--------------------------------------------")
+
+        for event in events:
+            if isinstance(event, ModuleEvent):
+                print(
+                    f"{event.name}, type:{event.type}, moudle_id:{event.module_id}, "
+                )
+            elif isinstance(event, KernelEvent):
+                print(f"{event.name}, type:{event.type}, moudle_id:{event}, ")
+
+        return
+
+        make_stats_map(stats, smap)
         roots = _build_module_hierarchy(events)
-        roots.sort(key=lambda x: x.name)
+        print(smap)
+        dump_modules(0, roots, smap)
+
+        #roots.sort(key=lambda x: x.name)
         self.assertEqual(2, len(roots))
         self.assertEqual('nn.Module: Conv2', roots[0].name)
         self.assertEqual('nn.Module: MyModule', roots[1].name)
@@ -2683,7 +2866,6 @@ class TestModuleView(unittest.TestCase):
 
 
 class TestDataPipe(unittest.TestCase):
-
     def test_datapipe(self):
         json_content = """[
             {
@@ -2718,4 +2900,7 @@ class TestDataPipe(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    a = TestProfiler()
+    a = TestModuleView()
+    a.test_build_module_hierarchy()
