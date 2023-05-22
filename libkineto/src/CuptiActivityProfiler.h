@@ -86,9 +86,6 @@ struct ConfigDerivedState final {
   int64_t profileStartIteration() const { return profileStartIter_; }
   int64_t profileEndIteration() const { return profileEndIter_; }
   bool isProfilingByIteration() const { return profilingByIter_; }
-  bool profileWithPythonStack() const {
-    return profileWithStack_;
-  }
 
  private:
   std::set<ActivityType> profileActivityTypes_;
@@ -100,7 +97,6 @@ struct ConfigDerivedState final {
   int64_t profileStartIter_{-1};
   int64_t profileEndIter_{-1};
   bool profilingByIter_{false};
-  bool profileWithStack_{false};
 };
 
 class CuptiActivityProfiler {
@@ -308,6 +304,8 @@ class CuptiActivityProfiler {
   void handleCorrelationActivity(
       const CUpti_ActivityExternalCorrelation* correlation);
   void handleRuntimeActivity(
+      const CUpti_ActivityAPI* activity, ActivityLogger* logger);
+  void handleDriverActivity(
       const CUpti_ActivityAPI* activity, ActivityLogger* logger);
   void handleOverheadActivity(
       const CUpti_ActivityOverhead* activity, ActivityLogger* logger);

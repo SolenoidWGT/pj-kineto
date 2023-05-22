@@ -6,17 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#pragma once
+#include "LoggingAPI.h"
+
+#include "Logger.h"
 
 namespace libkineto {
+int getLogSeverityLevel() {
+  return Logger::severityLevel();
+}
 
-class ClientInterface {
- public:
-  virtual ~ClientInterface() {}
-  virtual void init() = 0;
-  virtual void prepare(bool, bool, bool, bool, bool) = 0;
-  virtual void start() = 0;
-  virtual void stop() = 0;
-};
-
+void setLogSeverityLevel(int level) {
+  SET_LOG_SEVERITY_LEVEL(level);
+}
 } // namespace libkineto

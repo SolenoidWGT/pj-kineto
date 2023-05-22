@@ -32,17 +32,19 @@ using std::vector;
 
 namespace KINETO_NAMESPACE {
 
+constexpr std::chrono::milliseconds Config::kControllerIntervalMsecs;
+
 constexpr milliseconds kDefaultSamplePeriodMsecs(1000);
 constexpr milliseconds kDefaultMultiplexPeriodMsecs(1000);
 constexpr milliseconds kDefaultActivitiesProfileDurationMSecs(500);
 constexpr int kDefaultActivitiesMaxGpuBufferSize(128 * 1024 * 1024);
 constexpr seconds kDefaultActivitiesWarmupDurationSecs(5);
-constexpr seconds kDefaultBufferUntilWarmup(10);
 constexpr seconds kDefaultReportPeriodSecs(1);
 constexpr int kDefaultSamplesPerReport(1);
 constexpr int kDefaultMaxEventProfilersPerGpu(1);
 constexpr int kDefaultEventProfilerHearbeatMonitorPeriod(0);
 constexpr seconds kMaxRequestAge(10);
+constexpr seconds kDefaultOnDemandConfigUpdateIntervalSecs(5);
 // 3200000 is the default value set by CUPTI
 constexpr size_t kDefaultCuptiDeviceBufferSize(3200000);
 // Default value set by CUPTI is 250
@@ -73,8 +75,15 @@ constexpr char kActivitiesMaxGpuBufferSizeKey[] =
     "ACTIVITIES_MAX_GPU_BUFFER_SIZE_MB";
 
 // Client Interface
+// TODO: keep supporting these older config options, deprecate in the future using replacements.
 constexpr char kClientInterfaceEnableOpInputsCollection[] = "CLIENT_INTERFACE_ENABLE_OP_INPUTS_COLLECTION";
 constexpr char kPythonStackTrace[] = "PYTHON_STACK_TRACE";
+// Profiler Config Options
+constexpr char kProfileReportInputShapes[] = "PROFILE_REPORT_INPUT_SHAPES";
+constexpr char kProfileProfileMemory[] = "PROFILE_PROFILE_MEMORY";
+constexpr char kProfileWithStack[] = "PROFILE_WITH_STACK";
+constexpr char kProfileWithFlops[] = "PROFILE_WITH_FLOPS";
+constexpr char kProfileWithModules[] = "PROFILE_WITH_MODULES";
 
 constexpr char kActivitiesWarmupIterationsKey[] =
     "ACTIVITIES_WARMUP_ITERATIONS";
@@ -128,6 +137,8 @@ constexpr char kEnableSigUsr2Key[] = "ENABLE_SIGUSR2";
 // Enable communication through IPC Fabric
 // and disable thrift communication with dynolog daemon
 constexpr char kEnableIpcFabricKey[] = "ENABLE_IPC_FABRIC";
+// Period to pull on-demand config from dynolog daemon
+constexpr char kOnDemandConfigUpdateIntervalSecsKey[] = "ON_DEMAND_CONFIG_UPDATE_INTERVAL_SECS";
 
 // Verbose log level
 // The actual glog is not used and --v and --vmodule has no effect.
@@ -214,6 +225,7 @@ Config::Config()
       requestTimestamp_(milliseconds(0)),
       enableSigUsr2_(false),
       enableIpcFabric_(false),
+      onDemandConfigUpdateIntervalSecs_(kDefaultOnDemandConfigUpdateIntervalSecs),
       cuptiDeviceBufferSize_(kDefaultCuptiDeviceBufferSize),
       cuptiDeviceBufferPoolLimit_(kDefaultCuptiDeviceBufferPoolLimit) {
   auto factories = configFactories();
@@ -368,11 +380,24 @@ bool Config::handleOption(const std::string& name, std::string& val) {
     activitiesWarmupIterations_ = toInt32(val);
   }
 
-  // Client Interface
+  // TODO: Deprecate Client Interface
   else if (!name.compare(kClientInterfaceEnableOpInputsCollection)) {
-    enableOpInputsCollection_ = toBool(val);
+    enableReportInputShapes_ = toBool(val);
   } else if (!name.compare(kPythonStackTrace)) {
-    enablePythonStackTrace_ = toBool(val);
+    enableWithStack_ = toBool(val);
+  }
+
+  // Profiler Config
+  else if (!name.compare(kProfileReportInputShapes)) {
+    enableReportInputShapes_ = toBool(val);
+  } else if (!name.compare(kProfileProfileMemory)) {
+    enableProfileMemory_ = toBool(val);
+  } else if (!name.compare(kProfileWithStack)) {
+    enableWithStack_ = toBool(val);
+  } else if (!name.compare(kProfileWithFlops)) {
+    enableWithFlops_ = toBool(val);
+  } else if (!name.compare(kProfileWithModules)) {
+    enableWithModules_ = toBool(val);
   }
 
   // Common
@@ -391,6 +416,8 @@ bool Config::handleOption(const std::string& name, std::string& val) {
     enableSigUsr2_ = toBool(val);
   } else if (!name.compare(kEnableIpcFabricKey)) {
     enableIpcFabric_ = toBool(val);
+  } else if (!name.compare(kOnDemandConfigUpdateIntervalSecsKey)) {
+    onDemandConfigUpdateIntervalSecs_ = seconds(toInt32(val));
   } else {
     return false;
   }
@@ -458,9 +485,9 @@ void Config::validate(
   if (!hasProfileStartTime()) {
     VLOG(0)
         << "No explicit timestamp has been set. "
-        << "Defaulting it to now + activitiesWarmupDuration with buffer.";
+        << "Defaulting it to now + activitiesWarmupDuration with a buffer of double the period of the monitoring thread.";
     profileStartTime_ = fallbackProfileStartTime +
-        activitiesWarmupDuration() + kDefaultBufferUntilWarmup;
+        activitiesWarmupDuration() + 2 * Config::kControllerIntervalMsecs;
   }
 
   if (profileStartIterationRoundUp_ == 0) {

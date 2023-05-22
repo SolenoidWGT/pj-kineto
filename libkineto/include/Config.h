@@ -180,12 +180,24 @@ class Config : public AbstractConfig {
     selectedActivityTypes_ = types;
   }
 
-  bool isOpInputsCollectionEnabled() const {
-    return enableOpInputsCollection_;
+  bool isReportInputShapesEnabled() const {
+    return enableReportInputShapes_;
   }
 
-  bool isPythonStackTraceEnabled() const {
-    return enablePythonStackTrace_;
+  bool isProfileMemoryEnabled() const {
+    return enableProfileMemory_;
+  }
+
+  bool isWithStackEnabled() const {
+    return enableWithStack_;
+  }
+
+  bool isWithFlopsEnabled() const {
+    return enableWithFlops_;
+  }
+
+  bool isWithModulesEnabled() const {
+    return enableWithModules_;
   }
 
   // Trace for this long
@@ -277,6 +289,10 @@ class Config : public AbstractConfig {
     return enableIpcFabric_;
   }
 
+  std::chrono::seconds onDemandConfigUpdateIntervalSecs() const {
+    return onDemandConfigUpdateIntervalSecs_;
+  }
+
   static std::chrono::milliseconds alignUp(
       std::chrono::milliseconds duration,
       std::chrono::milliseconds alignment) {
@@ -298,6 +314,8 @@ class Config : public AbstractConfig {
   activityProfilerRequestReceivedTime() const {
     return activitiesOnDemandTimestamp_;
   }
+
+  static constexpr std::chrono::milliseconds kControllerIntervalMsecs{1000};
 
   // Users may request and set trace id and group trace id.
   const std::string& requestTraceID() const {
@@ -411,12 +429,13 @@ class Config : public AbstractConfig {
   std::chrono::seconds activitiesWarmupDuration_;
   int activitiesWarmupIterations_;
 
-  // Client Interface
-  // Enable inputs collection when tracing ops
-  bool enableOpInputsCollection_{true};
-
-  // Enable Python Stack Tracing
-  bool enablePythonStackTrace_{false};
+  // Enable Profiler Config Options
+  // Temporarily disable shape collection until we re-roll out the feature for on-demand cases
+  bool enableReportInputShapes_{false};
+  bool enableProfileMemory_{false};
+  bool enableWithStack_{false};
+  bool enableWithFlops_{false};
+  bool enableWithModules_{false};
 
   // Profile for specified iterations and duration
   std::chrono::milliseconds activitiesDuration_;
@@ -450,6 +469,7 @@ class Config : public AbstractConfig {
 
   // Enable IPC Fabric instead of thrift communication
   bool enableIpcFabric_;
+  std::chrono::seconds onDemandConfigUpdateIntervalSecs_;
 
   // Logger Metadata
   std::string requestTraceID_;

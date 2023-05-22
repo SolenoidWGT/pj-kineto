@@ -60,7 +60,6 @@ ConfigDerivedState::ConfigDerivedState(const Config& config) {
     profileEndIter_ = (std::numeric_limits<decltype(profileEndIter_)>::max)();
     profileEndTime_ = profileStartTime_ + config.activitiesDuration();
   }
-  profileWithStack_ = config.isPythonStackTraceEnabled();
 }
 
 bool ConfigDerivedState::canStart(
@@ -398,6 +397,32 @@ void CuptiActivityProfiler::handleRuntimeActivity(
   runtime_activity.log(*logger);
 }
 
+void CuptiActivityProfiler::handleDriverActivity(
+    const CUpti_ActivityAPI* activity,
+    ActivityLogger* logger) {
+  // we only want to collect cuLaunchKernel events, for triton kernel launches
+  if (activity->cbid != CUPTI_DRIVER_TRACE_CBID_cuLaunchKernel) {
+    return;
+  }
+  VLOG(2) << activity->correlationId
+          << ": CUPTI_ACTIVITY_KIND_DRIVER, cbid=" << activity->cbid
+          << " tid=" << activity->threadId;
+  int32_t tid = activity->threadId;
+  const auto& it = resourceInfo_.find({processId(), tid});
+  if (it != resourceInfo_.end()) {
+    tid = it->second.id;
+  }
+  const ITraceActivity* linked =
+      linkedActivity(activity->correlationId, cpuCorrelationMap_);
+  const auto& runtime_activity =
+      traceBuffers_->addActivityWrapper(DriverActivity(activity, linked, tid));
+  checkTimestampOrder(&runtime_activity);
+  if (outOfRange(runtime_activity)) {
+    return;
+  }
+  runtime_activity.log(*logger);
+}
+
 void CuptiActivityProfiler::handleOverheadActivity(
     const CUpti_ActivityOverhead* activity,
     ActivityLogger* logger) {
@@ -545,6 +570,10 @@ void CuptiActivityProfiler::handleCuptiActivity(
       handleOverheadActivity(
           reinterpret_cast<const CUpti_ActivityOverhead*>(record), logger);
       break;
+    case CUPTI_ACTIVITY_KIND_DRIVER:
+      handleDriverActivity(
+          reinterpret_cast<const CUpti_ActivityAPI*>(record), logger);
+      break;
     default:
       LOG(WARNING) << "Unexpected activity type: " << record->kind;
       break;
@@ -660,7 +689,12 @@ void CuptiActivityProfiler::configure(
   }
 
   if (libkineto::api().client()) {
-    libkineto::api().client()->warmup(config_->isOpInputsCollectionEnabled());
+    libkineto::api().client()->prepare(
+      config_->isReportInputShapesEnabled(),
+      config_->isProfileMemoryEnabled(),
+      config_->isWithStackEnabled(),
+      config_->isWithFlopsEnabled(),
+      config_->isWithModulesEnabled());
   }
 
   if (derivedConfig_->isProfilingByIteration()) {
@@ -788,7 +822,6 @@ const time_point<system_clock> CuptiActivityProfiler::performRunLoopStep(
         }
         startTrace(now);
         if (libkineto::api().client()) {
-          libkineto::api().client()->set_withstack(derivedConfig_->profileWithPythonStack());
           libkineto::api().client()->start();
         }
         if (nextWakeupTime > derivedConfig_->profileEndTime()) {

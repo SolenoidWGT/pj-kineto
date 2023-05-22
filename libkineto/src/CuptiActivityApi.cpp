@@ -29,6 +29,30 @@ namespace KINETO_NAMESPACE {
 // case, there will be 32 buffers contending for the mutex.
 constexpr size_t kBufSize(4 * 1024 * 1024);
 
+#ifdef HAS_CUPTI
+bool cuptiLazyInit_() {
+  return getenv("TEARDOWN_CUPTI") != nullptr && getenv("DISABLE_CUPTI_LAZY_REINIT") == nullptr;
+}
+
+inline void reenableCuptiCallbacks_(std::shared_ptr<CuptiCallbackApi>& cbapi_) {
+  // Re-enable callbacks from the past if they exist.
+  LOG(INFO) << "Re-enable previous CUPTI callbacks - Starting";
+  VLOG(1) << "  CUPTI subscriber before reinit:" << cbapi_->getCuptiSubscriber();
+  cbapi_->initCallbackApi();
+  if (cbapi_->initSuccess()) {
+    VLOG(1) << "  CUPTI subscriber after reinit:" << cbapi_->getCuptiSubscriber();
+    bool status = cbapi_->reenableCallbacks();
+    if (!status) {
+      LOG(WARNING) << "Re-enable previous CUPTI callbacks - Failed to reenableCallbacks";
+    } else {
+      LOG(INFO) << "Re-enable previous CUPTI callbacks - Successful";
+    }
+  } else {
+    LOG(WARNING) << "Re-enable previous CUPTI callbacks - Failed to initCallbackApi";
+  }
+}
+#endif
+
 CuptiActivityApi& CuptiActivityApi::singleton() {
   static CuptiActivityApi instance;
   return instance;
@@ -277,6 +301,13 @@ void CuptiActivityApi::bufferCompleted(
 void CuptiActivityApi::enableCuptiActivities(
     const std::set<ActivityType>& selected_activities) {
 #ifdef HAS_CUPTI
+  // Lazily support re-init of CUPTI Callbacks, if they were finalized before.
+  auto cbapi_ = CuptiCallbackApi::singleton();
+  if (!tracingEnabled_ && !cbapi_->initSuccess() && cuptiLazyInit_()) {
+    reenableCuptiCallbacks_(cbapi_);
+  }
+  cbapi_.reset();
+
   CUPTI_CALL(
       cuptiActivityRegisterCallbacks(bufferRequestedTrampoline, bufferCompletedTrampoline));
 
@@ -297,6 +328,9 @@ void CuptiActivityApi::enableCuptiActivities(
     }
     if (activity == ActivityType::CUDA_RUNTIME) {
       CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
+    }
+    if (activity == ActivityType::CUDA_DRIVER) {
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
     }
     if (activity == ActivityType::OVERHEAD) {
       CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
@@ -328,6 +362,9 @@ void CuptiActivityApi::disableCuptiActivities(
     }
     if (activity == ActivityType::CUDA_RUNTIME) {
       CUPTI_CALL(cuptiActivityDisable(CUPTI_ACTIVITY_KIND_RUNTIME));
+    }
+    if (activity == ActivityType::CUDA_DRIVER) {
+      CUPTI_CALL(cuptiActivityDisable(CUPTI_ACTIVITY_KIND_DRIVER));
     }
     if (activity == ActivityType::OVERHEAD) {
       CUPTI_CALL(cuptiActivityDisable(CUPTI_ACTIVITY_KIND_OVERHEAD));
@@ -366,6 +403,7 @@ void CuptiActivityApi::teardownContext() {
       // Force Flush before finalize
       CUPTI_CALL(cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED));
 
+      LOG(INFO) << "  CUPTI subscriber before finalize:" << cbapi_->getCuptiSubscriber();
       teardownCupti_ = 1;
       std::unique_lock<std::mutex> lck(finalizeMutex_);
       finalizeCond_.wait(lck, [&]{return teardownCupti_ == 0;});
@@ -375,13 +413,13 @@ void CuptiActivityApi::teardownContext() {
       teardownCupti_ = 0;
       tracingEnabled_ = 0;
 
-      // Re-enable callbacks from the past.
-      cbapi_->initCallbackApi();
-      cbapi_->reenableCallbacks();
-      status = cbapi_->disableCallbackDomain(CUPTI_CB_DOMAIN_RUNTIME_API);
-      status = status && cbapi_->disableCallbackDomain(CUPTI_CB_DOMAIN_DRIVER_API);
-      if (!status) {
-        LOG(WARNING) << "CUPTI Callback failed to disable for domain";
+      // Remove the callbacks used specifically for cuptiFinalize
+      cbapi_->disableCallbackDomain(CUPTI_CB_DOMAIN_RUNTIME_API);
+      cbapi_->disableCallbackDomain(CUPTI_CB_DOMAIN_DRIVER_API);
+
+      // Re-init CUPTI Callbacks if Lazy Re-init is not enabled.
+      if (!cuptiLazyInit_()) {
+        reenableCuptiCallbacks_(cbapi_);
       }
       cbapi_.reset();
     });
