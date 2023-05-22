@@ -1,6 +1,4 @@
-# Kineto
-
-## kinto代码结构
+# kinto代码结构
 
 - EventParser.parse
   - parse_nodes：根据时间的包含和间隔关系建立event的父子调用关系
@@ -153,8 +151,8 @@ root_node.fill_stats()
 
 ### 1.4 update_device_steps 
 
-
-
+# Kineto
+--------------------------------------------------------------------------------------------
 Kineto is part of the PyTorch Profiler.
 
 The Kineto project was started to help enable
