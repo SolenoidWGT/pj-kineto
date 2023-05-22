@@ -33,6 +33,7 @@ class BaseNode(ABC):
         kwargs['end_time'] = event.ts + event.duration
         kwargs['type'] = event.type
         kwargs['tid'] = event.tid
+        # print(f"kwargs:{kwargs}")
 
         external_id = getattr(event, 'external_id', None)
         if external_id is not None:
@@ -90,6 +91,9 @@ class OperatorNode(HostNode):
         self.tc_eligible = self.name in TC_OP_Allowlist
         self.tc_self_duration = 0  # Time of TC kernels launched by this op excluding its children operators.
         self.tc_total_duration = 0  # Time of TC kernels launched by this op including its children operators.
+    
+    def __repr__(self) -> str:
+        return f"Op name:{self.name}, runtimes:{self.runtimes}, dtime:{self.self_device_duration}, child:{self.children}"
 
     def fill_stats(self):
         # TODO: Replace recursive by using a stack, in case of too deep callstack.
@@ -101,6 +105,8 @@ class OperatorNode(HostNode):
             child.fill_stats()
         for rt in self.runtimes:
             rt.fill_stats(self)
+        if len(self.runtimes) > 1:
+            print(f"len self.runtimes:{len(self.runtimes)}")
 
         self.self_host_duration = self.end_time - self.start_time
         for child in self.children:
@@ -126,11 +132,14 @@ class OperatorNode(HostNode):
     def get_operator_and_kernels(self):
         ops: List[OperatorNode] = []
         kernels: List[DeviceNode] = []
+        # print(f"ops name : {self.name},")
         for child in self.children:
+            # print(f"ops name : {self.name}, has child : {child.name}")
             child_ops, child_kernels = child.get_operator_and_kernels()
             ops.extend(child_ops)
             kernels.extend(child_kernels)
         for rt in self.runtimes:
+            # print(f"ops name : {self.name}, has kernel : {rt.name}")
             kernels.extend(list(rt.get_kernels()))
 
         if is_operator_node(self):
@@ -257,6 +266,9 @@ class RuntimeNode(HostNode):
         kwargs = BaseNode.get_node_argument(event)
         return cls(device_nodes=device_nodes, **kwargs)
 
+    def __repr__(self) -> str:
+        return f"RuntimeNode name:{self.name}, device_nodes:{self.device_nodes}, tc_duration:{self.tc_duration}"
+
 
 class DeviceNode(BaseNode):
     def __init__(self,
@@ -291,7 +303,9 @@ class DeviceNode(BaseNode):
             kwargs['shared_memory'] = event.shared_memory
             kwargs['device_id'] = event.device_id
         return cls(**kwargs)
-
+    
+    def __repr__ (self) -> str:
+        return f"DeviceNode: {self.name}, op_name:{self.op_name}, device_id:{self.device_id}"
 
 def create_operator_node(event: OperatorEvent):
     if (event.name.startswith('enumerate(DataLoader)#') and event.name.endswith('.__next__')

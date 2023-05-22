@@ -91,6 +91,9 @@ class KernelAggByNameOp:
     def avg_occupancy(self) -> float:
         return self.occupancy / self.total_duration if self.total_duration > 0 else 0
 
+    def __repr__(self) -> str:
+        return f"AggKernel: {self.name}, opname:{self.op_name}, total_duration:{self.total_duration}"
+
 
 def aggregate_kernels(kernel_list: List[DeviceNode]) -> List[KernelAggByNameOp]:
     name_op_to_agg: Dict[str, KernelAggByNameOp] = {}
@@ -114,8 +117,8 @@ def aggregate_kernels(kernel_list: List[DeviceNode]) -> List[KernelAggByNameOp]:
     return kernel_list_groupby_name_op
 
 
-class ModuleAggregator:
 
+class ModuleAggregator:
     def __init__(self):
         self.op_list_groupby_name: List[OperatorAgg] = None  # For Operator-view.
         self.op_list_groupby_name_input: List[OperatorAgg] = None  # For Operator-view.
@@ -130,11 +133,13 @@ class ModuleAggregator:
         kernels: List[DeviceNode] = []
         for root in tid2tree.values():
             root_ops, root_kernels = root.get_operator_and_kernels()
+            print(f"root has root_ops:{root_ops}, root_kernels:{root_kernels}")
             ops.extend(root_ops)
             kernels.extend(root_kernels)
 
         # aggregate both kernels and operators
         self.kernel_list_groupby_name_op = aggregate_kernels(kernels)
+        print(f"self.kernel_list_groupby_name_op:{self.kernel_list_groupby_name_op}")
 
         keys: List[Callable[[OperatorNode], str]] = [
             lambda x: x.name,
@@ -143,6 +148,7 @@ class ModuleAggregator:
             lambda x: '###'.join((x.name, str(x.input_shape), str(x.callstack)))
         ]
         agg_result = aggregate_ops(ops, keys)
+        # print(f"agg_result:{agg_result}")
         stack_lists_group_by_name: Dict[str, List[OperatorAgg]] = defaultdict(list)
         stack_lists_group_by_name_input: Dict[str, List[OperatorAgg]] = defaultdict(list)
         for agg in agg_result[2].values():
