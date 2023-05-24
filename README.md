@@ -1,4 +1,4 @@
-# kinto代码结构
+# kinto代码结构(待更新)
 
 - EventParser.parse
   - parse_nodes：根据时间的包含和间隔关系建立event的父子调用关系
