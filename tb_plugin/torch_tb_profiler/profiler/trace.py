@@ -20,7 +20,7 @@ class EventTypes(object):
     TRACE = 'Trace'
     OPERATOR = 'Operator'
     PROFILER_STEP = 'ProfilerStep'
-    RUNTIME = 'Runtime'
+    RUNTIME = 'cuda_runtime'
     KERNEL = 'Kernel'
     MEMCPY = 'Memcpy'
     MEMSET = 'Memset'
@@ -37,7 +37,8 @@ EventTypeMap = {
     'trace': EventTypes.TRACE,
     'cpu_op': EventTypes.OPERATOR,
     'operator': EventTypes.OPERATOR,
-    'runtime': EventTypes.RUNTIME,
+    # "cpu_instant_event":EventTypes.OPERATOR,
+    'cuda_runtime': EventTypes.RUNTIME,
     'kernel': EventTypes.KERNEL,
     'memcpy': EventTypes.MEMCPY,
     'gpu_memcpy': EventTypes.MEMCPY,
@@ -211,6 +212,7 @@ def create_trace_event(event, is_pytorch_lightning) -> Optional[BaseEvent]:
         else:
             return PythonFunctionEvent(event_type, event)
     elif event_type is not None:
+        # print(f"Unexpect !! event_type:{event_type}")
         return DurationEvent(event_type, event)
     return None
 

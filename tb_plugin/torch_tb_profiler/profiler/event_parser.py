@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # -------------------------------------------------------------------------
 import sys
+import copy
 from collections import defaultdict
 from enum import IntEnum
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -33,6 +34,44 @@ class ProfileRole(IntEnum):
     Total = 8
 
 
+def find_op_correlation_runtime_node(op: OperatorNode, externalid_to_runtime: Dict[int, List[RuntimeNode]] ):
+    runtime_nodes, external_id_list = [], []
+    for external_id, runtime_node_list in externalid_to_runtime.items():
+        min_start_time = sys.maxsize
+        max_end_time = 0
+        # 必须保证这个op cpu侧的执行时间，完全包裹对应 runtime_node_list 里面的 cudaLaunchKernel 的执行时间
+        # 另外需要注意的是，我们必须保证找到其直系孩子，也就是找到最小包含关系
+        for runtime_node in runtime_node_list:
+            # print(f"external_id:{external_id} has: runtime_node name:{runtime_node.name}, start_time:{runtime_node.start_time}, end_time:{runtime_node.end_time}, self.external_id:{runtime_node.external_id}")
+            if runtime_node.start_time < min_start_time:
+                min_start_time = runtime_node.start_time
+            if runtime_node.end_time > max_end_time:
+                max_end_time = runtime_node.end_time
+        
+        if op.start_time <= min_start_time and op.end_time >= max_end_time:
+            # print(f"op:{op.name} has runtime_node_list :{runtime_node}")
+            runtime_nodes.extend(runtime_node_list)
+            external_id_list.append(external_id)
+    
+    print(f"finally op:{op.name} has runtime_node_list {len(runtime_nodes)}")
+    return runtime_nodes, external_id_list
+
+
+def traverse_tid2tree(op: OperatorNode, tid2tree: Dict[int, OperatorNode], externalid_to_runtime: Dict[int, List[RuntimeNode]], level=0):
+    print("   "*level + f"v:{op}")
+    for cnode in op.children:
+        traverse_tid2tree(cnode, tid2tree, externalid_to_runtime, level+1)
+    # do something.
+    runtime_nodes, external_id_list = find_op_correlation_runtime_node(op, externalid_to_runtime)
+    if len(runtime_nodes) > 0:
+        print(f"op:{op.name} with external_id:{op.external_id} add runtime nodes: {runtime_nodes}")
+        op.runtimes.extend(runtime_nodes)
+        for external_id in external_id_list:
+            externalid_to_runtime.pop(external_id)   # 避免后面再统计到这个 runtime
+    # else:
+        # print(f"op:{op.name} with external_id:{op.external_id} has no relative tunime_nodes")
+    
+
 class NodeParserMixin:
     def __init__(self, *args, **kwargs):
         """Please refer to https://stackoverflow.com/questions/9575409/calling-parent-class-init-with-multiple-inheritance-whats-the-right-way # noqa: E501
@@ -47,6 +86,8 @@ class NodeParserMixin:
         self.use_dp = False
         self.use_ddp = False
         self.comm_lib = set()
+        
+        # self.externalid_to_runtime = defaultdict(list)
 
     def parse_nodes(self, events: Iterable[BaseEvent]):
         # For OperatorNode and ProfilerStepNode:
@@ -66,7 +107,8 @@ class NodeParserMixin:
 
         corrid_to_runtime: Dict[int, RuntimeNode] = {}  # value is a RuntimeNode
         externalid_to_runtime: Dict[int, List[RuntimeNode]] = defaultdict(list)  # value is a list of RuntimeNode
-
+        
+        print("<<<<<<<<<<<<<<<<< parse_nodes begin!>>>>>>>>>>>>>>>>>>>")
         for event in events:
             if event.type == EventTypes.MEMORY:
                 continue
@@ -85,11 +127,19 @@ class NodeParserMixin:
                     self._update_communication_node(event)
 
         # associate CUDA Runtimes with CPU events
-        for op_list in tid2list.values():
-            for op in op_list:
-                runtime_nodes = externalid_to_runtime.pop(op.external_id, [])
-                if runtime_nodes:
-                    op.runtimes.extend(runtime_nodes)
+        # 需要从叶子节点往根节点遍历，这样避免每个节点包含来自孙子节点的runtime的信息
+
+        self.externalid_to_runtime = copy.deepcopy(externalid_to_runtime)
+        # for op_list in tid2list.values():
+        #     for op in op_list:
+        #         # print(f"Pop op {op.external_id} list from externalid_to_runtime")
+        #         # runtime_nodes = externalid_to_runtime.pop(op.external_id, []) # 这个是原来的方法，我们发现有的runtime的external_id无法对应到一个op上去，应该是kinto/pytorch的bug
+        #         runtime_nodes,_ = find_op_correlation_runtime_node(op, externalid_to_runtime)
+        #         if runtime_nodes:
+        #             print(f"op:{op.name} with external_id:{op.external_id} add runtime nodes: {runtime_nodes}")
+        #             op.runtimes.extend(runtime_nodes)
+        #         else:
+        #             print(f"op:{op.name} with external_id:{op.external_id} has no relative tunime_nodes")
         for ext_id in externalid_to_runtime:
             if ext_id != 0:
                 logger.warning("{} Runtime with external id {} don't correlate to any operator!".format(
@@ -132,9 +182,12 @@ class NodeParserMixin:
                     tid2zero_rt_list: Dict[int, List[RuntimeNode]]):
         corrid = event.correlation_id
         tid = event.tid
+        count = 0
+        # print(f"corrid_to_runtime: {corrid_to_runtime}")
         if event.type in [EventTypes.KERNEL, EventTypes.MEMCPY, EventTypes.MEMSET]:
             self.used_devices.add(event.pid)
             device_node = DeviceNode.create(event)
+            print(f"create device node : {device_node}")
             if corrid in corrid_to_runtime:
                 rt_node = corrid_to_runtime[corrid]  # Don't pop it because it may be used by next kernel.
                 if rt_node.device_nodes is None:
@@ -151,10 +204,13 @@ class NodeParserMixin:
                 corrid_to_device[corrid].append(device_node)
             self.device_node_list.append(device_node)
         elif event.type == EventTypes.RUNTIME:
+            count = 1
             device_nodes = corrid_to_device.pop(corrid, None)
             rt_node = RuntimeNode.create(event, device_nodes)
             corrid_to_runtime[corrid] = rt_node
             externalid_to_runtime[rt_node.external_id].append(rt_node)
+            # if rt_node.external_id != 0:
+            #     print(f"event:{event} is external_id is {rt_node.external_id}")
             # Some runtimes has external_id 0, which will not be correlated to any operator.
             # So get them and attach them to root node.
             if rt_node.external_id == 0:
@@ -164,6 +220,7 @@ class NodeParserMixin:
             # check the external_id
             if device_nodes:
                 for device_node in device_nodes:
+                    print(f"device_node:{device_node}")
                     if rt_node.external_id != device_node.external_id:
                         logger.warning(
                             'Runtime and Device-op have same correlation id %s but with different external id!'
@@ -203,6 +260,11 @@ class NodeParserMixin:
         elif event.type == EventTypes.PL_PROFILE:
             op_node = PLProfileNode.create(event)
             pl_tid2list[int(tid)].append(op_node)
+        
+        # if count == 1:
+        #     print("found EventTypes.RUNTIME!")
+        # else:
+        #     print("not found EventTypes.RUNTIME!")
 
 
 class StepParser:
@@ -224,10 +286,12 @@ class StepParser:
         self.global_end_ts = -sys.maxsize - 1
 
     def parse_steps(self, events: Iterable[DurationEvent], comm_nodes: Dict[int, CommunicationNode]):
+        print("<<<<<<<<<<<<<parse_steps>>>>>>>>>>>>>>>>>>>>>>>")
         for event in events:
             if event.type == EventTypes.MEMORY:
                 continue
-
+            
+            # 这一步主要是为了生成 role_ranges
             self._parse_step(event, comm_nodes)
             if event.type == EventTypes.TRACE and event.name == 'PyTorch Profiler (0)':
                 self.global_start_ts = event.ts
@@ -267,7 +331,9 @@ class StepParser:
         ts = event.ts
         dur = event.duration
         evt_type = event.type
+        # print("<<<<<<<<<<<<<_parse_step>>>>>>>>>>>>>>>>>>>>>>>")
         if evt_type == EventTypes.KERNEL:
+            print(f"add kernel event: event:{event.name}")
             if event.external_id in comm_nodes:
                 self.role_ranges[ProfileRole.Communication].append((ts, ts + dur))
             else:
@@ -277,12 +343,14 @@ class StepParser:
         elif evt_type == EventTypes.MEMSET:
             self.role_ranges[ProfileRole.Memset].append((ts, ts + dur))
         elif evt_type == EventTypes.RUNTIME:
+            print(f"add cuda_runtime event: event:{event.name}")
             self.role_ranges[ProfileRole.Runtime].append((ts, ts + dur))
         elif ((evt_type == EventTypes.OPERATOR or evt_type == EventTypes.USER_ANNOTATION) and (
                 (event.name.startswith('enumerate(DataLoader)#') and event.name.endswith('.__next__'))
                 or event.name.startswith('enumerate(DataPipe)#'))):
             self.role_ranges[ProfileRole.DataLoader].append((ts, ts + dur))
         elif event.type == EventTypes.PROFILER_STEP:
+            print(f"self.steps:{self.steps} add PROFILER_STEP")
             self.steps.append((ts, ts + dur))
             self.steps_names.append(str(event.step))
         elif evt_type in [EventTypes.PYTHON, EventTypes.OPERATOR]:
@@ -301,7 +369,9 @@ class StepParser:
 
     def _find_device_steps(self, runtime_node_list: List[RuntimeNode]):
         """return steps associated with device nodes.
+        这个 step 应该是我们 schedule 里面的每一段的 activate 
         """
+        print("<<<<<<<<<<<<<_find_device_steps>>>>>>>>>>>>>>>>>>>>>>>")
         runtime_node_list = sorted(runtime_node_list, key=lambda x: x.start_time)
 
         # Use similar code with two-way merge to get all runtimes inside each host-side step span,
@@ -315,13 +385,18 @@ class StepParser:
         step_device_min_ts = sys.maxsize
         step_device_max_ts = -sys.maxsize - 1
         matched_device_nodes = set()
+        # print(f"len(runtime_node_list): {len(runtime_node_list)}")
+        # for item in runtime_node_list:
+        #     print(f"runtime_node:{item}")
 
+        # 下面这一段代码是为了把 runtime 节点(cudaLaunchKernel)和 kernel 关联起来
         while i_step < len(self.steps) and i_runtime < len(runtime_node_list):
             step_host_start_time = self.steps[i_step][0]
             step_host_end_time = self.steps[i_step][1]
             if runtime_node_list[i_runtime].start_time < step_host_start_time:
                 # This runtime is ahead of or intersects with this step span. Skip this runtime.
                 i_runtime += 1
+                # print(f"skip i_runtime:{i_runtime}")
             elif runtime_node_list[i_runtime].end_time <= step_host_end_time:
                 # and runtime_node_list[i_runtime].start_time >= step_host_start_time
                 # This runtime is inside this step span. Scan its device_nodes.
@@ -333,13 +408,16 @@ class StepParser:
                         matched_device_nodes.add(device_node)
                         steps_matched_device_nodes[i_step] += 1
                 i_runtime += 1
+                # print(f"count i_runtime:{i_runtime}")
             elif runtime_node_list[i_runtime].start_time < step_host_end_time:
                 # and runtime_node_list[i_runtime].end_time > step_host_end_time
                 # This runtime intersects with this step span. Skip this runtime.
+                # print(f"skip i_runtime:{i_runtime}")
                 i_runtime += 1
             else:
                 # runtime_node_list[i_runtime].start_time >= step_host_end_time
                 # This runtime starts after this step's end. Record and move forward this step.
+                # print(f"Record and move forwar i_runtime:{i_runtime}")
                 steps_device[i_step] = (step_device_min_ts, step_device_max_ts)
                 i_step += 1
                 step_device_min_ts = sys.maxsize
@@ -351,16 +429,23 @@ class StepParser:
             step_device_min_ts = sys.maxsize
             step_device_max_ts = -sys.maxsize - 1
             i_step += 1
+            print(f"i_step :{i_step} This step doesn't launch any device side event, just assign it as empty. ")
 
         # If there are matched device, find the first step end time before steps_device[0][0]
         prev_step_end_time: Optional[int] = None
+        # print(f"len(matched_device_nodes):{len(matched_device_nodes)}, {matched_device_nodes}")
+        # print(f"step_device_max_ts: {step_device_max_ts}, step_device_min_ts:{step_device_min_ts}")
         if len(matched_device_nodes) > 0:
             prev_step_end_time = self.steps[0][0]
+            # print(f"prev_step_end_time:{prev_step_end_time}, matched_device_nodes:{matched_device_nodes}")
+            # 这段代码的应该是在找上一个step的最大结束时间
             if steps_device[0][0] != sys.maxsize:  # When step 0 has device event.
+                # print("step 0 has device event.")
                 for device_node in self.device_node_list:
                     if device_node not in matched_device_nodes:
                         # Now this device_node is not launched inside any step span.
                         if device_node.end_time < steps_device[0][0]:
+                            # print("step 0 has device event.")
                             prev_step_end_time = max(prev_step_end_time, device_node.end_time)
 
         return prev_step_end_time, steps_device, steps_matched_device_nodes
@@ -373,9 +458,14 @@ class StepParser:
         Update self.steps_names if some tail steps are removed."""
 
         # Change step time to device side on the condition that any step have device time.
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<_update_steps_duration>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         is_use_gpu = prev_step_end_time is not None
+        print(f"self.steps : {self.steps}")
+        print(f"is_use_gpu: {is_use_gpu}", flush=True)
+        is_use_gpu = True
         if is_use_gpu:
             for i_step in range(len(self.steps)):
+                print(f"self.steps[i_step] : {self.steps[i_step]}")
                 step_start_time = max(prev_step_end_time, self.steps[i_step][0])
                 step_end_time = self.steps[i_step][1]
                 if steps_device[i_step][0] == sys.maxsize:  # When step i_step has no device event.
@@ -391,7 +481,7 @@ class StepParser:
                 self.steps[i_step] = (step_start_time, step_end_time)  # Update step time considering device side.
                 prev_step_end_time = step_end_time
 
-        is_remove_tail_steps = True  # TODO: Use tensorboard argument instead.
+        is_remove_tail_steps = False  # TODO: Use tensorboard argument instead.
         if is_use_gpu and len(self.steps) > 1 and is_remove_tail_steps:
             i_step = len(self.steps) - 1
             while i_step >= 0:
@@ -418,13 +508,23 @@ class EventParser(NodeParserMixin, StepParser):
         self.comm_node_list: Dict[CommunicationNode] = None
 
     def parse(self, events: Iterable[BaseEvent], fwd_bwd_map: Dict[int, int]) -> Dict[int, List[OperatorNode]]:
+        print("<<<<<<<<<<<<<<<<< EventParser >>>>>>>>>>>>>>>>>>>>")
         with utils.timing('EventParser: parse nodes'):
             tid2list, tid2zero_rt_list, staled_device_nodes, pl_tid2list = self.parse_nodes(events)
 
         with utils.timing('EventParser: build operator tree'):
-            builder = OpTreeBuilder()
+            builder = OpTreeBuilder(self.externalid_to_runtime)
             tid2tree = builder.build_tree(tid2list, tid2zero_rt_list, staled_device_nodes, fwd_bwd_map=fwd_bwd_map)
             pl_tid2tree = builder.build_tree(pl_tid2list, {}, [], {})
+
+        # <<<<<<<<<<<<< add two >>>>>>>>>>>>>>>>>>>>>>
+        # externalid_to_runtime = self.externalid_to_runtime
+        # print(f"externalid_to_runtime:{externalid_to_runtime}")
+        # print("\n")
+        # print("<<<<<<<<<<< second traverse_tid2tree >>>>>>>>>>>>>>>>>>>> ")
+        # for _, op in tid2tree.items():
+        #     traverse_tid2tree(op, tid2tree, externalid_to_runtime, 0)
+        # <<<<<<<<<<<<< add two >>>>>>>>>>>>>>>>>>>>>>
 
         with utils.timing('EventParser: parse steps times'):
             # Process steps
@@ -435,9 +535,11 @@ class EventParser(NodeParserMixin, StepParser):
                 self.communication_data.clear()
 
         # Move the interleaved logic out of each NodeParser and StepParser
+        print(f"EventParser.parse: {self.runtime_node_list}")
         self.update_device_steps(self.runtime_node_list)
 
         self.comm_node_list = generate_communication_nodes(self.communication_data, self.steps, self.steps_names)
+        print("<<<<<<<<<<<<<<<<< EventParser end >>>>>>>>>>>>>>>>>>>>")
         return tid2tree, pl_tid2tree
 
     @staticmethod
